@@ -1,0 +1,177 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light;
+  color: #171717;
+  background-color: #ffffff;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+@layer components {
+  /* Buttons */
+  .btn {
+    @apply px-3 py-1.5 font-medium transition-colors;
+  }
+
+  .btn-primary {
+    @apply bg-primary hover:bg-primary-hover text-white rounded-[10px];
+  }
+
+  .btn-secondary {
+    @apply bg-white text-[#171717] rounded-lg border border-[#EBEBEB] hover:border-[#171717];
+  }
+
+  .btn-danger {
+    @apply bg-red-600 hover:bg-red-700 text-white;
+  }
+
+  .btn-sm {
+    @apply px-3 py-1.5 text-sm;
+  }
+
+  /* Inputs */
+  .input {
+    @apply w-full px-3 py-2 border border-[#EBEBEB] rounded-lg bg-white text-[#171717] placeholder:text-[#A4A4A4] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent;
+  }
+
+  .label {
+    @apply block text-sm font-medium text-[#171717] mb-1;
+  }
+
+  /* Cards */
+  .card {
+    @apply bg-white rounded-lg shadow-sm border border-[#EBEBEB];
+  }
+
+  /* Badges */
+  .badge {
+    @apply px-2 py-1 rounded-full text-xs font-medium;
+  }
+
+  .badge-success {
+    @apply bg-green-100 text-green-800;
+  }
+
+  .badge-warning {
+    @apply bg-yellow-100 text-yellow-800;
+  }
+
+  .badge-danger {
+    @apply bg-red-100 text-red-800;
+  }
+
+  .badge-info {
+    @apply bg-blue-100 text-blue-800;
+  }
+
+  /* Sidebar */
+  .sidebar-link {
+    @apply flex items-center gap-3 px-3 py-2 text-[#5C5C5C] hover:bg-white hover:text-primary rounded-lg transition-colors;
+  }
+
+  .sidebar-link-active {
+    @apply bg-white text-primary font-medium;
+  }
+
+  /* Tables */
+  .table {
+    @apply w-full text-sm text-left;
+  }
+
+  .table th {
+    @apply px-3 py-2 bg-[#F7F7F7] text-[#171717] font-medium border-b border-[#EBEBEB];
+  }
+
+  .table td {
+    @apply px-3 py-2 border-b border-[#EBEBEB] text-[#171717];
+  }
+
+  .table tr:hover {
+    @apply bg-[#F7F7F7];
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+  /* Loading spinner */
+  .spinner {
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid lab(59.0978% -58.6621 41.2579);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Fade in animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-in;
+}
+
+/* Modal backdrop */
+.modal-backdrop {
+  @apply fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50;
+}
+
+.modal-content {
+  @apply bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-auto m-4;
+}
+

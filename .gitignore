@@ -1,0 +1,7 @@
+# dist folder - Production Build
+# This folder is created by running: npm run build
+# After building, you can run the app without npm using the serve scripts
+
+# Don't commit the dist folder to git (it's generated)
+dist/
+node_modules

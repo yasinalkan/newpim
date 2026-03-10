@@ -1,0 +1,732 @@
+import type {
+  User,
+  Product,
+  Category,
+  Attribute,
+  Brand,
+  Channel,
+  ChannelCategory,
+  ChannelAttribute,
+  Settings,
+  ChannelValidationRule,
+  Order,
+} from '../types';
+
+// Users
+export const initialUsers: User[] = [
+  {
+    id: 1,
+    name: 'Admin User',
+    email: 'admin@vakko.com',
+    password: 'admin123', // In real app, this would be hashed
+    role: 'admin',
+    status: 'active',
+    permissions: null, // Admins have fixed permissions
+    avatar: 'https://ui-avatars.com/api/?name=Admin+User&background=2EAD5F&color=fff',
+    lastLogin: new Date().toISOString(),
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 2,
+    name: 'Standard User',
+    email: 'user@vakko.com',
+    password: 'user123',
+    role: 'standard_user',
+    status: 'active',
+    permissions: {
+      products: { view: true, edit: true, update: true, pageAccess: true },
+      categories: { view: true, edit: false, update: false, pageAccess: true },
+      attributes: { view: true, edit: false, update: false, pageAccess: true },
+      settings: { view: false, edit: false, update: false, pageAccess: false },
+    },
+    avatar: 'https://ui-avatars.com/api/?name=Standard+User&background=3B82F6&color=fff',
+    lastLogin: '2024-12-10T10:30:00Z',
+    createdAt: '2024-01-15T00:00:00Z',
+    updatedAt: '2024-12-10T10:30:00Z',
+  },
+];
+
+// Brands
+export const initialBrands: Brand[] = [
+  { id: 1, name: 'Vakko', logo: '', createdAt: '2024-01-01T00:00:00Z' },
+  { id: 2, name: 'V2K', logo: '', createdAt: '2024-01-01T00:00:00Z' },
+  { id: 3, name: 'Vakkorama', logo: '', createdAt: '2024-01-01T00:00:00Z' },
+  { id: 4, name: 'VLuxury', logo: '', createdAt: '2024-01-01T00:00:00Z' },
+];
+
+// Categories
+export const initialCategories: Category[] = [
+  {
+    id: 1,
+    name: 'Clothing',
+    parentId: null,
+    level: 0,
+    path: 'Clothing',
+    productCount: 45,
+    children: null,
+    requiredAttributeIds: [5], // Origin is required for all clothing
+    variantAttributeIds: [1, 2], // Color and Size are variant attributes
+    channelMappings: {},
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z',
+  },
+  {
+    id: 2,
+    name: 'Men\'s Clothing',
+    parentId: 1,
+    level: 1,
+    path: 'Clothing > Men\'s Clothing',
+    productCount: 25,
+    children: null,
+    requiredAttributeIds: [1, 2, 5], // Color, Size, Origin required
+    variantAttributeIds: [1, 2], // Color and Size for variants
+    channelMappings: {},
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z',
+  },
+  {
+    id: 3,
+    name: 'Women\'s Clothing',
+    parentId: 1,
+    level: 1,
+    path: 'Clothing > Women\'s Clothing',
+    productCount: 20,
+    children: null,
+    requiredAttributeIds: [1, 2, 5], // Color, Size, Origin required
+    variantAttributeIds: [1, 2], // Color and Size for variants
+    channelMappings: {},
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z',
+  },
+  {
+    id: 4,
+    name: 'Men\'s Suits',
+    parentId: 2,
+    level: 2,
+    path: 'Clothing > Men\'s Clothing > Men\'s Suits',
+    productCount: 15,
+    children: null,
+    requiredAttributeIds: [1, 2, 3, 5], // Color, Size, Fabric, Origin required
+    variantAttributeIds: [1, 2], // Color and Size for variants
+    channelMappings: {},
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z',
+  },
+  {
+    id: 5,
+    name: 'Men\'s Shirts',
+    parentId: 2,
+    level: 2,
+    path: 'Clothing > Men\'s Clothing > Men\'s Shirts',
+    productCount: 10,
+    children: null,
+    requiredAttributeIds: [1, 2, 3, 5], // Color, Size, Fabric, Origin required
+    variantAttributeIds: [1, 2], // Color and Size for variants
+    channelMappings: {},
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z',
+  },
+  {
+    id: 6,
+    name: 'Accessories',
+    parentId: null,
+    level: 0,
+    path: 'Accessories',
+    productCount: 30,
+    children: null,
+    requiredAttributeIds: [5], // Origin required
+    variantAttributeIds: [1], // Color for variants
+    channelMappings: {},
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z',
+  },
+  {
+    id: 7,
+    name: 'Ties',
+    parentId: 6,
+    level: 1,
+    path: 'Accessories > Ties',
+    productCount: 12,
+    children: null,
+    requiredAttributeIds: [1, 5], // Color and Origin required
+    variantAttributeIds: [1], // Color for variants
+    channelMappings: {},
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z',
+  },
+  {
+    id: 8,
+    name: 'Belts',
+    parentId: 6,
+    level: 1,
+    path: 'Accessories > Belts',
+    productCount: 8,
+    children: null,
+    requiredAttributeIds: [1, 5], // Color and Origin required
+    variantAttributeIds: [1], // Color for variants
+    channelMappings: {},
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z',
+  },
+];
+
+// Attributes
+export const initialAttributes: Attribute[] = [
+  {
+    id: 1,
+    code: 'COLOR',
+    name: 'Color',
+    attributeType: 'select',
+    attributeVariableType: 'string',
+    categoryIds: [1, 2, 3, 4, 5],
+    required: true,
+    validation: {
+      options: [
+        { value: 'black', label: 'Black' },
+        { value: 'white', label: 'White' },
+        { value: 'blue', label: 'Blue' },
+        { value: 'navy', label: 'Navy' },
+        { value: 'gray', label: 'Gray' },
+      ],
+    },
+    defaultValue: null,
+    channelMappings: {},
+    isVariantAttribute: true,
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z',
+  },
+  {
+    id: 2,
+    code: 'SIZE',
+    name: 'Size',
+    attributeType: 'select',
+    attributeVariableType: 'string',
+    categoryIds: [1, 2, 3, 4, 5],
+    required: true,
+    validation: {
+      options: [
+        { value: 'xs', label: 'XS' },
+        { value: 's', label: 'S' },
+        { value: 'm', label: 'M' },
+        { value: 'l', label: 'L' },
+        { value: 'xl', label: 'XL' },
+        { value: 'xxl', label: 'XXL' },
+      ],
+    },
+    defaultValue: null,
+    channelMappings: {},
+    isVariantAttribute: true,
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z',
+  },
+  {
+    id: 3,
+    code: 'FABRIC',
+    name: 'Fabric',
+    attributeType: 'freeText',
+    attributeVariableType: 'string',
+    categoryIds: [1, 2, 3, 4, 5],
+    required: false,
+    validation: {},
+    defaultValue: null,
+    channelMappings: {},
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z',
+  },
+  {
+    id: 4,
+    code: 'CARE_INSTRUCTIONS',
+    name: 'Care Instructions',
+    attributeType: 'freeText',
+    attributeVariableType: 'string',
+    categoryIds: [1, 2, 3, 4, 5],
+    required: false,
+    validation: {},
+    defaultValue: null,
+    channelMappings: {},
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z',
+  },
+  {
+    id: 5,
+    code: 'ORIGIN',
+    name: 'Origin',
+    attributeType: 'freeText',
+    attributeVariableType: 'string',
+    categoryIds: [1, 2, 3, 4, 5, 6, 7, 8],
+    required: true,
+    validation: {},
+    defaultValue: 'Türkiye',
+    channelMappings: {},
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z',
+  },
+];
+
+// Products
+export const initialProducts: Product[] = [
+  {
+    id: 1,
+    sku: 'VK-SUIT-001',
+    baseSKU: 'VK-SUIT-BASE-001', // Base product identifier
+    name: 'Classic Navy Suit',
+    brand: 'Vakko',
+    brandId: 1,
+    model: 'Slim Fit',
+    categoryId: 4,
+    description: 'Elegant and stylish navy suit. Wool blend fabric, slim fit cut.',
+    keywords: 'suit, navy, wedding',
+    stock: 45,
+    price: 4999,
+    images: [
+      'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=800',
+      'https://images.unsplash.com/photo-1593030761757-71fae45fa0e7?w=800',
+    ],
+    imageUrl: 'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=800',
+    attributes: {
+      '1': { value: 'navy' },
+      '2': { value: 'l' },
+      '3': { value: '%70 Yün, %30 Polyester' },
+      '5': { value: 'Türkiye' },
+    },
+    status: 'complete',
+    parentProductId: null,
+    variantAttributes: null,
+    isBaseProduct: false,
+    createdBy: 1,
+    updatedBy: 1,
+    createdAt: '2024-01-15T10:00:00Z',
+    updatedAt: '2024-12-01T15:30:00Z',
+  },
+  {
+    id: 2,
+    sku: 'VK-SHIRT-001',
+    baseSKU: 'VK-SHIRT-BASE-001', // Base product for shirts
+    name: 'White Oxford Shirt',
+    brand: 'Vakko',
+    brandId: 1,
+    model: 'Regular Fit',
+    categoryId: 5,
+    description: 'Classic white Oxford shirt. 100% cotton, regular fit.',
+    keywords: 'shirt, white, oxford, cotton',
+    stock: 120,
+    price: 799,
+    images: [
+      'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=800',
+    ],
+    imageUrl: 'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=800',
+    attributes: {
+      '1': { value: 'white' },
+      '2': { value: 'm' },
+      '3': { value: '%100 Pamuk' },
+      '5': { value: 'Türkiye' },
+    },
+    status: 'complete',
+    parentProductId: null,
+    variantAttributes: null,
+    isBaseProduct: false,
+    createdBy: 1,
+    updatedBy: 1,
+    createdAt: '2024-02-01T10:00:00Z',
+    updatedAt: '2024-11-20T14:00:00Z',
+  },
+  {
+    id: 6,
+    sku: 'VK-SHIRT-002',
+    baseSKU: 'VK-SHIRT-BASE-001', // Same base product as id 2 - Blue variant
+    name: 'Blue Oxford Shirt',
+    brand: 'Vakko',
+    brandId: 1,
+    model: 'Regular Fit',
+    categoryId: 5,
+    description: 'Classic blue Oxford shirt. 100% cotton, regular fit.',
+    keywords: 'shirt, blue, oxford, cotton',
+    stock: 95,
+    price: 799,
+    images: [
+      'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=800',
+    ],
+    imageUrl: 'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=800',
+    attributes: {
+      '1': { value: 'blue' },
+      '2': { value: 'm' },
+      '3': { value: '%100 Pamuk' },
+      '5': { value: 'Türkiye' },
+    },
+    status: 'complete',
+    parentProductId: null,
+    variantAttributes: null,
+    isBaseProduct: false,
+    createdBy: 1,
+    updatedBy: 1,
+    createdAt: '2024-02-01T10:00:00Z',
+    updatedAt: '2024-11-20T14:00:00Z',
+  },
+  {
+    id: 7,
+    sku: 'VK-SHIRT-003',
+    baseSKU: 'VK-SHIRT-BASE-001', // Same base product - Black variant
+    name: 'Black Oxford Shirt',
+    brand: 'Vakko',
+    brandId: 1,
+    model: 'Regular Fit',
+    categoryId: 5,
+    description: 'Classic black Oxford shirt. 100% cotton, regular fit.',
+    keywords: 'shirt, black, oxford, cotton',
+    stock: 78,
+    price: 799,
+    images: [
+      'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=800',
+    ],
+    imageUrl: 'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=800',
+    attributes: {
+      '1': { value: 'black' },
+      '2': { value: 'l' },
+      '3': { value: '%100 Pamuk' },
+      '5': { value: 'Türkiye' },
+    },
+    status: 'complete',
+    parentProductId: null,
+    variantAttributes: null,
+    isBaseProduct: false,
+    createdBy: 1,
+    updatedBy: 1,
+    createdAt: '2024-02-01T10:00:00Z',
+    updatedAt: '2024-11-20T14:00:00Z',
+  },
+  {
+    id: 3,
+    sku: 'VK-TIE-001',
+    baseSKU: null, // Standalone product with no variants
+    name: 'Silk Tie - Patterned',
+    brand: 'Vakko',
+    brandId: 1,
+    model: null,
+    categoryId: 7,
+    description: '100% silk tie. Elegant pattern and superior quality.',
+    keywords: 'tie, silk, patterned',
+    stock: 85,
+    price: 599,
+    images: [
+      'https://images.unsplash.com/photo-1589756823695-278bc8356558?w=800',
+    ],
+    imageUrl: 'https://images.unsplash.com/photo-1589756823695-278bc8356558?w=800',
+    attributes: {
+      '1': { value: 'blue' },
+      '3': { value: '%100 İpek' },
+      '5': { value: 'İtalya' },
+    },
+    status: 'complete',
+    parentProductId: null,
+    variantAttributes: null,
+    isBaseProduct: false,
+    createdBy: 1,
+    updatedBy: 1,
+    createdAt: '2024-03-10T10:00:00Z',
+    updatedAt: '2024-12-05T09:00:00Z',
+  },
+  {
+    id: 4,
+    sku: 'V2K-BELT-001',
+    baseSKU: null, // Standalone product
+    name: 'Leather Belt - Black',
+    brand: 'V2K',
+    brandId: 2,
+    model: null,
+    categoryId: 8,
+    description: 'Genuine leather belt. Classic black color.',
+    keywords: 'belt, leather, black',
+    stock: 0,
+    price: 899,
+    images: [
+      'https://images.unsplash.com/photo-1624222247344-550fb60583bb?w=800',
+    ],
+    imageUrl: 'https://images.unsplash.com/photo-1624222247344-550fb60583bb?w=800',
+    attributes: {
+      '1': { value: 'black' },
+      '3': { value: '%100 Hakiki Deri' },
+      '5': { value: 'Türkiye' },
+    },
+    status: 'complete',
+    parentProductId: null,
+    variantAttributes: null,
+    isBaseProduct: false,
+    createdBy: 1,
+    updatedBy: 2,
+    createdAt: '2024-04-01T10:00:00Z',
+    updatedAt: '2024-12-10T11:00:00Z',
+  },
+  {
+    id: 5,
+    sku: 'VK-SUIT-002-DRAFT',
+    baseSKU: null, // Draft product
+    name: 'New Suit Model',
+    brand: 'Vakko',
+    brandId: 1,
+    model: 'Modern Fit',
+    categoryId: 4,
+    description: 'Draft stage new model suit.',
+    keywords: null,
+    stock: 0,
+    price: 5499,
+    images: [],
+    imageUrl: '',
+    attributes: {
+      '5': { value: 'Türkiye' },
+    },
+    status: 'draft',
+    parentProductId: null,
+    variantAttributes: null,
+    isBaseProduct: false,
+    createdBy: 2,
+    updatedBy: 2,
+    createdAt: '2024-12-15T14:30:00Z',
+    updatedAt: '2024-12-15T14:30:00Z',
+  },
+];
+
+
+// Channels
+export const initialChannels: Channel[] = [
+  {
+    id: 'amazon',
+    name: 'Amazon',
+    type: 'marketplace',
+    isActive: true,
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z',
+  },
+  {
+    id: 'trendyol',
+    name: 'Trendyol',
+    type: 'marketplace',
+    isActive: true,
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z',
+  },
+];
+
+// Channel Categories (example data for Amazon)
+export const initialChannelCategories: Record<string, ChannelCategory[]> = {
+  amazon: [
+    {
+      id: 'amazon_cat_1',
+      channelId: 'amazon',
+      name: 'Clothing, Shoes & Jewelry',
+      parentId: null,
+      level: 0,
+      path: 'Clothing, Shoes & Jewelry',
+      children: [
+        {
+          id: 'amazon_cat_2',
+          channelId: 'amazon',
+          name: "Women's Clothing",
+          parentId: 'amazon_cat_1',
+          level: 1,
+          path: 'Clothing, Shoes & Jewelry > Women\'s Clothing',
+          children: [
+            {
+              id: 'amazon_cat_3',
+              channelId: 'amazon',
+              name: 'Dresses',
+              parentId: 'amazon_cat_2',
+              level: 2,
+              path: 'Clothing, Shoes & Jewelry > Women\'s Clothing > Dresses',
+              children: null,
+            },
+          ],
+        },
+      ],
+    },
+  ],
+  trendyol: [
+    {
+      id: 'trendyol_cat_1',
+      channelId: 'trendyol',
+      name: 'Kadın',
+      parentId: null,
+      level: 0,
+      path: 'Kadın',
+      children: [
+        {
+          id: 'trendyol_cat_2',
+          channelId: 'trendyol',
+          name: 'Elbise',
+          parentId: 'trendyol_cat_1',
+          level: 1,
+          path: 'Kadın > Elbise',
+          children: null,
+        },
+      ],
+    },
+  ],
+};
+
+// Channel Attributes (example data)
+export const initialChannelAttributes: Record<string, ChannelAttribute[]> = {
+  amazon: [
+    {
+      id: 'amazon_attr_1',
+      channelId: 'amazon',
+      name: 'Color',
+      type: 'select',
+      isRequired: true,
+      allowedValues: ['Black', 'White', 'Red', 'Blue', 'Green'],
+    },
+    {
+      id: 'amazon_attr_2',
+      channelId: 'amazon',
+      name: 'Size',
+      type: 'select',
+      isRequired: true,
+      allowedValues: ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
+    },
+    {
+      id: 'amazon_attr_3',
+      channelId: 'amazon',
+      name: 'Material',
+      type: 'text',
+      isRequired: false,
+      allowedValues: null,
+    },
+  ],
+  trendyol: [
+    {
+      id: 'trendyol_attr_1',
+      channelId: 'trendyol',
+      name: 'Renk',
+      type: 'select',
+      isRequired: true,
+      allowedValues: ['Siyah', 'Beyaz', 'Kırmızı', 'Mavi'],
+    },
+    {
+      id: 'trendyol_attr_2',
+      channelId: 'trendyol',
+      name: 'Beden',
+      type: 'select',
+      isRequired: true,
+      allowedValues: ['XS', 'S', 'M', 'L', 'XL'],
+    },
+  ],
+};
+
+// Settings
+export const initialSettings: Settings = {
+  apiKeys: [],
+  validation: {
+    product: {
+      requiredFields: ['sku', 'name', 'brand', 'categoryId', 'price'],
+      fieldLengths: {
+        sku: 50,
+        name: 200,
+        description: 5000,
+      },
+      valueRanges: {
+        price: { min: 0, max: 1000000 },
+        stock: { min: 0, max: 100000 },
+      },
+    },
+    asset: {
+      maxFileSize: 5242880, // 5MB
+      maxImageCount: 10,
+    },
+  },
+  preferences: {
+    dateFormat: 'DD/MM/YYYY',
+    timezone: 'Europe/Istanbul',
+    itemsPerPage: 20,
+    emailNotifications: true,
+  },
+  languages: [
+    {
+      id: 1,
+      code: 'en',
+      name: 'English',
+      nativeName: 'English',
+      isDefault: true,
+      isActive: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    {
+      id: 2,
+      code: 'tr',
+      name: 'Turkish',
+      nativeName: 'Türkçe',
+      isDefault: false,
+      isActive: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+  ],
+  categoryMappings: [],
+  attributeMappings: [],
+  attributeValueMappings: [],
+  exportLogs: [],
+};
+
+// Orders (for product deletion validation - FR-3.1)
+export const initialOrders: Order[] = [
+  {
+    id: 1,
+    productId: 1, // Reference to product ID 1
+    orderNumber: 'ORD-2024-001',
+    quantity: 2,
+    status: 'completed',
+    createdAt: '2024-01-15T10:30:00Z',
+  },
+  {
+    id: 2,
+    productId: 1, // Same product has multiple orders
+    orderNumber: 'ORD-2024-002',
+    quantity: 1,
+    status: 'pending',
+    createdAt: '2024-01-20T14:20:00Z',
+  },
+  {
+    id: 3,
+    productId: 3, // Reference to product ID 3
+    orderNumber: 'ORD-2024-003',
+    quantity: 5,
+    status: 'completed',
+    createdAt: '2024-01-10T09:15:00Z',
+  },
+  // Note: Products 2, 4, 5, etc. have no orders and can be deleted
+];
+
+export const initialChannelValidationRules: ChannelValidationRule[] = [
+  {
+    id: 1,
+    channelId: 'amazon',
+    name: 'All products must have category mapping',
+    type: 'completeness',
+    severity: 'error',
+    isActive: true,
+    condition: {
+      checkType: 'required',
+      target: 'category',
+    },
+    message: 'Product "{productName}" is missing category mapping',
+    createdBy: 1,
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z',
+  },
+  {
+    id: 2,
+    channelId: 'amazon',
+    name: 'Required attributes must be mapped',
+    type: 'attribute',
+    severity: 'warning',
+    isActive: true,
+    condition: {
+      checkType: 'required',
+      target: 'attribute',
+    },
+    message: 'Required attribute "{attributeName}" is not mapped',
+    createdBy: 1,
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z',
+  },
+];
+

@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PIM Debug - Hata Kontrolü</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            margin: 20px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #4EC9B0;
+        }
+        .section {
+            background: #252526;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+            border-left: 4px solid #4EC9B0;
+        }
+        .error {
+            border-left-color: #f48771;
+        }
+        .success {
+            border-left-color: #89d185;
+        }
+        .warning {
+            border-left-color: #dcdcaa;
+        }
+        #console-output {
+            background: #1e1e1e;
+            padding: 15px;
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #3e3e42;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+        }
+        .log-error {
+            color: #f48771;
+        }
+        .log-warn {
+            color: #dcdcaa;
+        }
+        .log-info {
+            color: #4EC9B0;
+        }
+        .button {
+            background: #0e639c;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 3px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .button:hover {
+            background: #1177bb;
+        }
+        iframe {
+            width: 100%;
+            height: 600px;
+            border: 2px solid #3e3e42;
+            border-radius: 5px;
+        }
+        .status {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 3px;
+            margin: 5px;
+        }
+        .status-ok {
+            background: #89d185;
+            color: #1e1e1e;
+        }
+        .status-error {
+            background: #f48771;
+            color: #1e1e1e;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 PIM Uygulaması - Debug Konsolu</h1>
+        
+        <div class="section success">
+            <h2>✅ Dosya Kontrolleri</h2>
+            <div id="file-checks">Kontrol ediliyor...</div>
+        </div>
+
+        <div class="section warning">
+            <h2>📋 Konsol Çıktısı</h2>
+            <p>JavaScript hataları burada görünecek:</p>
+            <div id="console-output"></div>
+            <button class="button" onclick="clearConsole()">Temizle</button>
+        </div>
+
+        <div class="section">
+            <h2>🚀 Uygulama Önizleme</h2>
+            <p>Uygulama aşağıda iframe içinde yükleniyor. Hata varsa yukarıdaki konsol bölümünde görünecek.</p>
+            <button class="button" onclick="reloadApp()">Yeniden Yükle</button>
+            <button class="button" onclick="openInNewTab()">Yeni Sekmede Aç</button>
+            <br><br>
+            <iframe id="app-frame" src="./dist/index.html"></iframe>
+        </div>
+    </div>
+
+    <script>
+        const consoleOutput = document.getElementById('console-output');
+        let logCount = 0;
+
+        // Console'u yakala
+        const originalConsole = {
+            log: console.log,
+            error: console.error,
+            warn: console.warn,
+            info: console.info
+        };
+
+        function addLog(type, ...args) {
+            logCount++;
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${type.toUpperCase()}: ${args.join(' ')}`;
+            consoleOutput.appendChild(entry);
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+            
+            // Orijinal console'a da yazdır
+            originalConsole[type](...args);
+        }
+
+        console.log = (...args) => addLog('info', ...args);
+        console.error = (...args) => addLog('error', ...args);
+        console.warn = (...args) => addLog('warn', ...args);
+        console.info = (...args) => addLog('info', ...args);
+
+        // Window error'ları yakala
+        window.addEventListener('error', (e) => {
+            addLog('error', `Global Error: ${e.message} at ${e.filename}:${e.lineno}`);
+        });
+
+        // Unhandled promise rejection'ları yakala
+        window.addEventListener('unhandledrejection', (e) => {
+            addLog('error', `Unhandled Promise: ${e.reason}`);
+        });
+
+        // Dosya kontrolleri
+        async function checkFiles() {
+            const checks = document.getElementById('file-checks');
+            let html = '';
+
+            // index.html kontrolü
+            try {
+                const response = await fetch('./dist/index.html');
+                if (response.ok) {
+                    html += '<span class="status status-ok">✓ index.html bulundu</span>';
+                    const text = await response.text();
+                    
+                    // Script ve CSS kontrolü
+                    const hasScript = text.includes('type="module"');
+                    const hasCSS = text.includes('.css');
+                    
+                    if (hasScript) html += '<span class="status status-ok">✓ JavaScript bulundu</span>';
+                    else html += '<span class="status status-error">✗ JavaScript bulunamadı</span>';
+                    
+                    if (hasCSS) html += '<span class="status status-ok">✓ CSS bulundu</span>';
+                    else html += '<span class="status status-error">✗ CSS bulunamadı</span>';
+                } else {
+                    html += '<span class="status status-error">✗ index.html bulunamadı</span>';
+                }
+            } catch (e) {
+                html += '<span class="status status-error">✗ Dosya kontrolü hatası: ' + e.message + '</span>';
+            }
+
+            checks.innerHTML = html;
+        }
+
+        function clearConsole() {
+            consoleOutput.innerHTML = '';
+            logCount = 0;
+            addLog('info', 'Konsol temizlendi');
+        }
+
+        function reloadApp() {
+            document.getElementById('app-frame').src = './dist/index.html?' + Date.now();
+            addLog('info', 'Uygulama yeniden yükleniyor...');
+        }
+
+        function openInNewTab() {
+            window.open('./dist/index.html', '_blank');
+            addLog('info', 'Uygulama yeni sekmede açıldı');
+        }
+
+        // İlk yükleme
+        addLog('info', 'Debug konsolu başlatıldı');
+        checkFiles();
+
+        // iframe load event
+        document.getElementById('app-frame').addEventListener('load', () => {
+            addLog('info', 'Uygulama iframe içinde yüklendi');
+            
+            // iframe içindeki hataları yakala
+            try {
+                const iframe = document.getElementById('app-frame');
+                iframe.contentWindow.addEventListener('error', (e) => {
+                    addLog('error', `[IFRAME] ${e.message}`);
+                });
+            } catch (e) {
+                addLog('warn', 'iframe içindeki hataları yakalayamadık (CORS)');
+            }
+        });
+    </script>
+</body>
+</html>
