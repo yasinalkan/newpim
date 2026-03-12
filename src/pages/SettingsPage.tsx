@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Settings as SettingsIcon, Globe } from 'lucide-react';
+import { Settings as SettingsIcon, Globe, DollarSign } from 'lucide-react';
 
 import ValidationRules from '../components/settings/ValidationRules';
 import LanguageManagement from '../components/settings/LanguageManagement';
+import CurrencyManagement from '../components/settings/CurrencyManagement';
 
 const SettingsPage: React.FC = () => {
   const { currentUser } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<'validation' | 'languages'>('validation');
+  const [activeTab, setActiveTab] = useState<'validation' | 'languages' | 'currencies'>('validation');
 
   if (currentUser?.role !== 'admin') {
     return (
@@ -24,6 +25,7 @@ const SettingsPage: React.FC = () => {
   const tabs = [
     { id: 'validation', label: 'Validation Rules', icon: SettingsIcon },
     { id: 'languages', label: 'Languages', icon: Globe },
+    { id: 'currencies', label: 'Currencies', icon: DollarSign },
   ];
 
   return (
@@ -57,6 +59,7 @@ const SettingsPage: React.FC = () => {
       <div>
         {activeTab === 'validation' && <ValidationRules />}
         {activeTab === 'languages' && <LanguageManagement />}
+        {activeTab === 'currencies' && <CurrencyManagement />}
       </div>
     </div>
   );
