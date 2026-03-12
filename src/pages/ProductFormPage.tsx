@@ -4,9 +4,37 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { ArrowLeft, Save, Plus, X, Image as ImageIcon, GripVertical, Globe, Info } from 'lucide-react';
-import type { MultiLangText, ProductStatus, Currency } from '../types';
+import type { MultiLangText, ProductStatus, Currency, MeasurementUnit, Attribute } from '../types';
 import CategoryPicker from '../components/CategoryPicker';
 import LocalizedTextField from '../components/LocalizedTextField';
+
+// Small helper rendered for number-type attributes to show unit suffix
+const NumberAttributeInput: React.FC<{
+  attr: Attribute;
+  value: string | number | boolean | null | undefined;
+  units: MeasurementUnit[];
+  onChange: (v: number | string) => void;
+  getText: (t: any) => string;
+}> = ({ attr, value, units, onChange, getText }) => {
+  const unitObj = attr.unit ? units.find(u => u.code === attr.unit) : null;
+  return (
+    <div className="relative">
+      <input
+        type="number"
+        value={value !== null && value !== undefined ? Number(value) : ''}
+        onChange={(e) => onChange(e.target.value ? parseFloat(e.target.value) : '')}
+        className={`input ${unitObj ? 'pr-14' : ''}`}
+        placeholder={`Enter ${getText(attr.name).toLowerCase()}${unitObj ? ` (${unitObj.symbol})` : ''}...`}
+        step="any"
+      />
+      {unitObj && (
+        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-[#5C5C5C] bg-[#F7F7F7] px-1.5 py-0.5 rounded pointer-events-none select-none">
+          {unitObj.symbol}
+        </span>
+      )}
+    </div>
+  );
+};
 
 const ProductFormPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -49,6 +77,7 @@ const ProductFormPage: React.FC = () => {
   };
 
   const [prices, setPrices] = useState<Record<string, string>>(initializePrices);
+  const [salesUnit, setSalesUnit] = useState<string>('');
   const [stock, setStock] = useState('');
   const [status, setStatus] = useState<ProductStatus>('draft');
   const [productAttributes, setProductAttributes] = useState<Record<string, { value: string | number | boolean }>>({});
@@ -109,6 +138,7 @@ const ProductFormPage: React.FC = () => {
         if (defaultCurrency) loadedPrices[defaultCurrency.code] = existingProduct.price.toString();
       }
       setPrices(loadedPrices);
+      setSalesUnit(existingProduct.salesUnit || '');
       setStock(existingProduct.stock.toString());
       setStatus(existingProduct.status);
       setProductAttributes(existingProduct.attributes);
@@ -366,6 +396,7 @@ const ProductFormPage: React.FC = () => {
       description,
       price: productPrice,
       prices: productPrices,
+      salesUnit: salesUnit || undefined,
       stock: productStock,
       images: productImages,
       imageUrl: productImages[0] || '',
@@ -569,13 +600,12 @@ const ProductFormPage: React.FC = () => {
                         
                         {/* FreeText - Number */}
                         {attributeType === 'freeText' && attributeVariableType === 'number' && (
-                          <input
-                            type="number"
-                            value={currentValue !== null && currentValue !== undefined ? Number(currentValue) : ''}
-                            onChange={(e) => handleAttributeChange(attr.id, e.target.value ? parseFloat(e.target.value) : '')}
-                            className="input"
-                            placeholder={`Enter ${getText(attr.name).toLowerCase()}...`}
-                            step="any"
+                          <NumberAttributeInput
+                            attr={attr}
+                            value={currentValue}
+                            units={settings.units || []}
+                            onChange={(v) => handleAttributeChange(attr.id, v)}
+                            getText={getText}
                           />
                         )}
                         
@@ -1018,6 +1048,42 @@ const ProductFormPage: React.FC = () => {
                 )}
                 <p className="text-xs text-[#5C5C5C]">
                   Set prices for each active currency. Empty fields default to 0.
+                </p>
+              </div>
+            </div>
+
+            {/* Sales Unit */}
+            <div className="card p-6">
+              <h2 className="text-lg font-semibold text-[#171717] mb-4">Sales Unit</h2>
+              <div>
+                <label className="label">How is this product sold?</label>
+                <select
+                  value={salesUnit}
+                  onChange={(e) => setSalesUnit(e.target.value)}
+                  className="input"
+                >
+                  <option value="">— Select unit —</option>
+                  {(settings.units || []).filter((u: { isActive: boolean }) => u.isActive).length === 0 ? (
+                    <option disabled>No units configured. Go to Settings → Units to add.</option>
+                  ) : (
+                    ['other', 'weight', 'volume', 'length', 'area', 'temperature', 'time'].map(cat => {
+                      const catUnits = (settings.units || []).filter((u: { category: string; isActive: boolean }) => u.category === cat && u.isActive);
+                      if (catUnits.length === 0) return null;
+                      const catLabel = cat.charAt(0).toUpperCase() + cat.slice(1);
+                      return (
+                        <optgroup key={cat} label={catLabel}>
+                          {catUnits.map((u: { code: string; name: string; symbol: string }) => (
+                            <option key={u.code} value={u.code}>
+                              {u.name} ({u.symbol})
+                            </option>
+                          ))}
+                        </optgroup>
+                      );
+                    })
+                  )}
+                </select>
+                <p className="text-xs text-[#5C5C5C] mt-1">
+                  e.g. Pieces, Kilogram, Liter — defines the unit for pricing and ordering
                 </p>
               </div>
             </div>

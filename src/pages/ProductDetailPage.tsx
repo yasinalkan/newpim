@@ -245,6 +245,12 @@ const ProductDetailPage: React.FC = () => {
       return value ? 'Yes' : 'No';
     }
 
+    // Append unit symbol for number attributes
+    if (attribute.attributeVariableType === 'number' && attribute.unit) {
+      const unitObj = (settings.units || []).find((u: any) => u.code === attribute.unit);
+      if (unitObj) return `${String(value)} ${unitObj.symbol}`;
+    }
+
     return String(value);
   };
 

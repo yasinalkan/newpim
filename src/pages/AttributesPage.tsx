@@ -8,7 +8,8 @@ import type { Attribute, AttributeType, AttributeVariableType, MultiLangText, At
 
 const AttributesPage: React.FC = () => {
   const { getText, activeLanguages, defaultLanguage } = useLanguage();
-  const { attributes, createAttribute, updateAttribute, deleteAttribute } = useData();
+  const { attributes, createAttribute, updateAttribute, deleteAttribute, settings } = useData();
+  const activeUnits = (settings.units || []).filter(u => u.isActive);
   const { hasPermission, currentUser } = useAuth();
 
   // Initialize name state with all active languages
@@ -29,6 +30,7 @@ const AttributesPage: React.FC = () => {
   const [categoryIds, setCategoryIds] = useState<number[]>([]);
   const [required, setRequired] = useState(false);
   const [defaultValue, setDefaultValue] = useState<string>('');
+  const [unit, setUnit] = useState<string>('');
   const [validation, setValidation] = useState<AttributeValidation>({});
   const [newOptionValue, setNewOptionValue] = useState<string>('');
   const [newOptionLabel, setNewOptionLabel] = useState<MultiLangText>(initializeMultiLangText());
@@ -101,6 +103,7 @@ const AttributesPage: React.FC = () => {
     setCategoryIds([]);
     setRequired(false);
     setDefaultValue('');
+    setUnit('');
     setValidation({});
     setNewOptionValue('');
     setNewOptionLabel(initializeMultiLangText());
@@ -115,6 +118,7 @@ const AttributesPage: React.FC = () => {
     setCategoryIds([...attribute.categoryIds]);
     setRequired(attribute.required || false);
     setDefaultValue(attribute.defaultValue ? String(attribute.defaultValue) : '');
+    setUnit(attribute.unit || '');
     setValidation(attribute.validation || {});
     setShowForm(true);
   };
@@ -141,6 +145,7 @@ const AttributesPage: React.FC = () => {
       attributeType,
       type: attributeType,
       attributeVariableType,
+      unit: attributeVariableType === 'number' && unit ? unit : undefined,
       categoryIds: [...categoryIds],
       required,
       defaultValue: defaultValue.trim() || null,
@@ -304,7 +309,10 @@ const AttributesPage: React.FC = () => {
               <label className="label">Variable Type</label>
               <select
                 value={attributeVariableType}
-                onChange={(e) => setAttributeVariableType(e.target.value as AttributeVariableType)}
+                onChange={(e) => {
+                  setAttributeVariableType(e.target.value as AttributeVariableType);
+                  if (e.target.value !== 'number') setUnit('');
+                }}
                 className="input"
               >
                 <option value="string">String</option>
@@ -312,6 +320,42 @@ const AttributesPage: React.FC = () => {
                 <option value="boolean">Boolean</option>
               </select>
             </div>
+
+            {/* Unit selector — only for number attributes */}
+            {attributeVariableType === 'number' && (
+              <div>
+                <label className="label">Unit of Measurement</label>
+                <select
+                  value={unit}
+                  onChange={(e) => setUnit(e.target.value)}
+                  className="input"
+                >
+                  <option value="">— No unit —</option>
+                  {activeUnits.length === 0 ? (
+                    <option disabled>No active units. Go to Settings → Units to add some.</option>
+                  ) : (
+                    ['weight', 'length', 'area', 'volume', 'temperature', 'time', 'other'].map(cat => {
+                      const catUnits = activeUnits.filter(u => u.category === cat);
+                      if (catUnits.length === 0) return null;
+                      return (
+                        <optgroup key={cat} label={cat.charAt(0).toUpperCase() + cat.slice(1)}>
+                          {catUnits.map(u => (
+                            <option key={u.code} value={u.code}>
+                              {u.name} ({u.symbol})
+                            </option>
+                          ))}
+                        </optgroup>
+                      );
+                    })
+                  )}
+                </select>
+                {unit && (
+                  <p className="text-xs text-[#5C5C5C] mt-1">
+                    Values will be displayed with the unit symbol: <strong>{activeUnits.find(u => u.code === unit)?.symbol}</strong>
+                  </p>
+                )}
+              </div>
+            )}
 
             {attributeType === 'select' && (
               <div className="bg-[#FAFAFA] border border-[#EBEBEB] rounded-lg p-4">
@@ -453,42 +497,56 @@ const AttributesPage: React.FC = () => {
             <table className="table">
               <thead>
                 <tr>
-                  <th>Kod</th>
-                  <th>Etiket</th>
-                  <th>Tip</th>
-                  <th>Son Guncelleme</th>
+                  <th>Code</th>
+                  <th>Label</th>
+                  <th>Type</th>
+                  <th>Unit</th>
+                  <th>Last Updated</th>
                   {canEdit && <th></th>}
                 </tr>
               </thead>
               <tbody>
-                {paginatedAttributes.map((attribute) => (
-                  <tr key={attribute.id}>
-                    <td>{attribute.code}</td>
-                    <td>{getText(attribute.name)}</td>
-                    <td>{formatVariableType(attribute.attributeVariableType)}</td>
-                    <td>{formatDate(attribute.updatedAt || attribute.createdAt)}</td>
-                    {canEdit && (
+                {paginatedAttributes.map((attribute) => {
+                  const unitObj = attribute.unit ? (settings.units || []).find(u => u.code === attribute.unit) : null;
+                  return (
+                    <tr key={attribute.id}>
+                      <td>{attribute.code}</td>
+                      <td>{getText(attribute.name)}</td>
+                      <td>{formatVariableType(attribute.attributeVariableType)}</td>
                       <td>
-                        <div className="flex items-center gap-2 justify-end">
-                          <button
-                            onClick={() => handleEdit(attribute)}
-                            className="text-[#5C5C5C] hover:text-[#171717]"
-                            title="Edit"
-                          >
-                            <Edit size={18} />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(attribute.id)}
-                            className="text-[#5C5C5C] hover:text-red-500"
-                            title="Delete"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        </div>
+                        {unitObj ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-[#F7F7F7] text-[#5C5C5C] font-mono">
+                            {unitObj.symbol}
+                            <span className="font-normal text-[#A4A4A4]">({unitObj.name})</span>
+                          </span>
+                        ) : attribute.attributeVariableType === 'number' ? (
+                          <span className="text-xs text-[#A4A4A4]">—</span>
+                        ) : null}
                       </td>
-                    )}
-                  </tr>
-                ))}
+                      <td>{formatDate(attribute.updatedAt || attribute.createdAt)}</td>
+                      {canEdit && (
+                        <td>
+                          <div className="flex items-center gap-2 justify-end">
+                            <button
+                              onClick={() => handleEdit(attribute)}
+                              className="text-[#5C5C5C] hover:text-[#171717]"
+                              title="Edit"
+                            >
+                              <Edit size={18} />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(attribute.id)}
+                              className="text-[#5C5C5C] hover:text-red-500"
+                              title="Delete"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

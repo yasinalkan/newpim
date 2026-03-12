@@ -39,6 +39,7 @@ export interface Product {
   stock: number;
   price: number; // Base currency price (required)
   prices: Record<string, number>; // Multicurrency prices keyed by currency code
+  salesUnit?: string; // Unit code for how product is sold (e.g. pcs, kg, box)
   images: string[];
   imageUrl: string;
   attributes: Record<string, { value: string | number | boolean; status?: string }>;
@@ -102,6 +103,7 @@ export interface Attribute {
   validation: AttributeValidation;
   defaultValue: string | number | boolean | null;
   channelMappings: Record<string, AttributeMapping>;
+  unit?: string; // Unit code (e.g. 'kg', 'cm') — only meaningful for number-type attributes
   isVariantAttribute?: boolean;
   createdAt: string;
   updatedAt: string;
@@ -295,6 +297,7 @@ export interface Settings {
   preferences: SystemPreferences;
   languages: Language[]; // System languages
   currencies: Currency[]; // System currencies
+  units: MeasurementUnit[]; // Measurement units
   // Channel mappings
   categoryMappings: CategoryMapping[];
   attributeMappings: AttributeMapping[];
@@ -327,6 +330,17 @@ export interface Language {
   isActive: boolean; // Whether this language is active
   createdAt: string;
   updatedAt: string;
+}
+
+// Measurement unit types
+export type UnitCategory = 'weight' | 'length' | 'area' | 'volume' | 'temperature' | 'time' | 'other';
+
+export interface MeasurementUnit {
+  code: string;       // e.g. 'kg', 'cm', 'L'
+  name: string;       // e.g. 'Kilogram', 'Centimeter', 'Liter'
+  symbol: string;     // display symbol, e.g. 'kg', 'cm', 'L'
+  category: UnitCategory;
+  isActive: boolean;
 }
 
 // Currency types

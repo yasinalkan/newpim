@@ -722,6 +722,41 @@ export const initialSettings: Settings = {
     { code: 'EUR', name: 'Euro', symbol: '€', isDefault: false, isActive: true, exchangeRate: 0.028 },
     { code: 'GBP', name: 'British Pound', symbol: '£', isDefault: false, isActive: false, exchangeRate: 0.024 },
   ],
+  units: [
+    // Weight
+    { code: 'kg',  name: 'Kilogram',     symbol: 'kg',  category: 'weight',      isActive: true  },
+    { code: 'g',   name: 'Gram',         symbol: 'g',   category: 'weight',      isActive: true  },
+    { code: 'lb',  name: 'Pound',        symbol: 'lb',  category: 'weight',      isActive: true  },
+    { code: 'oz',  name: 'Ounce',        symbol: 'oz',  category: 'weight',      isActive: false },
+    // Length
+    { code: 'm',   name: 'Meter',        symbol: 'm',   category: 'length',      isActive: true  },
+    { code: 'cm',  name: 'Centimeter',   symbol: 'cm',  category: 'length',      isActive: true  },
+    { code: 'mm',  name: 'Millimeter',   symbol: 'mm',  category: 'length',      isActive: true  },
+    { code: 'in',  name: 'Inch',         symbol: 'in',  category: 'length',      isActive: true  },
+    // Area
+    { code: 'm2',  name: 'Square Meter', symbol: 'm²',  category: 'area',        isActive: true  },
+    { code: 'cm2', name: 'Square Centimeter', symbol: 'cm²', category: 'area',   isActive: false },
+    // Volume
+    { code: 'L',   name: 'Liter',        symbol: 'L',   category: 'volume',      isActive: true  },
+    { code: 'mL',  name: 'Milliliter',   symbol: 'mL',  category: 'volume',      isActive: true  },
+    { code: 'cl',  name: 'Centiliter',   symbol: 'cL',  category: 'volume',      isActive: false },
+    // Temperature
+    { code: 'C',   name: 'Celsius',      symbol: '°C',  category: 'temperature', isActive: true  },
+    { code: 'F',   name: 'Fahrenheit',   symbol: '°F',  category: 'temperature', isActive: false },
+    // Time
+    { code: 'yr',  name: 'Year',         symbol: 'yr',  category: 'time',        isActive: true  },
+    { code: 'mo',  name: 'Month',        symbol: 'mo',  category: 'time',        isActive: true  },
+    { code: 'day', name: 'Day',          symbol: 'day', category: 'time',        isActive: true  },
+    // Other (sales units)
+    { code: 'pcs', name: 'Pieces',       symbol: 'pcs', category: 'other',       isActive: true  },
+    { code: 'ea',  name: 'Each',         symbol: 'ea',  category: 'other',       isActive: true  },
+    { code: 'box', name: 'Box',          symbol: 'box', category: 'other',       isActive: true  },
+    { code: 'pk',  name: 'Pack',         symbol: 'pk',  category: 'other',       isActive: true  },
+    { code: 'dz',  name: 'Dozen',        symbol: 'dz',  category: 'other',       isActive: true  },
+    { code: 'set', name: 'Set',          symbol: 'set', category: 'other',       isActive: true  },
+    { code: 'pair', name: 'Pair',        symbol: 'pair', category: 'other',       isActive: true  },
+    { code: '%',   name: 'Percent',      symbol: '%',   category: 'other',       isActive: true  },
+  ],
   categoryMappings: [],
   attributeMappings: [],
   attributeValueMappings: [],
