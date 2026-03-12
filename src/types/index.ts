@@ -24,18 +24,17 @@ export interface User {
 }
 
 // Product types
-export type ProductStatus = 'draft' | 'complete';
+export type ProductStatus = 'draft' | 'pending' | 'complete';
 
 export interface Product {
   id: number;
   sku: string;
   baseSKU: string | null; // Base SKU identifier for main product (null for standalone products)
-  name: string;
+  name: MultiLangText | string; // Supports both string for legacy and MultiLangText for localization
   brand: string;
   brandId: number;
-  model: string | null;
   categoryId: number;
-  description: string;
+  description: MultiLangText | string; // Supports both string for legacy and MultiLangText for localization
   keywords: string | null;
   stock: number;
   price: number; // Price (required)

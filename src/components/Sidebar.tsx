@@ -13,8 +13,11 @@ import {
   ChevronRight,
   Plus,
   List,
-  ArrowRight,
   UserCog,
+  Layers,
+  GitBranch,
+  GitMerge,
+  SlidersHorizontal,
 } from 'lucide-react';
 
 const Sidebar: React.FC = () => {
@@ -37,6 +40,12 @@ const Sidebar: React.FC = () => {
       path: '/products',
       icon: Package,
       label: 'Products',
+      permission: 'products',
+    },
+    {
+      path: '/products/bulk-actions',
+      icon: Layers,
+      label: 'Bulk Actions',
       permission: 'products',
     },
     {
@@ -67,12 +76,12 @@ const Sidebar: React.FC = () => {
         },
         {
           path: '/channels/category-mapping',
-          icon: FolderTree,
+          icon: GitBranch,
           label: 'Category Mapping',
         },
         {
           path: '/channels/attribute-mapping',
-          icon: ArrowRight,
+          icon: GitMerge,
           label: 'Attribute Mapping',
         },
       ],
@@ -88,7 +97,7 @@ const Sidebar: React.FC = () => {
       submenu: [
         {
           path: '/settings',
-          icon: Settings,
+          icon: SlidersHorizontal,
           label: 'General Settings',
         },
         {
@@ -215,53 +224,51 @@ const Sidebar: React.FC = () => {
             </p>
           </div>
           
-          {/* User Switcher Button (Admin only) */}
-          {currentUser?.role === 'admin' && (
-            <div className="relative">
-              <button
-                onClick={() => setShowUserSwitcher(!showUserSwitcher)}
-                className="p-2 text-[#5C5C5C] hover:text-primary hover:bg-white rounded-lg transition-colors"
-                title="Switch User"
-              >
-                <UserCog size={18} />
-              </button>
+          {/* User Switcher Button */}
+          <div className="relative">
+            <button
+              onClick={() => setShowUserSwitcher(!showUserSwitcher)}
+              className="p-2 text-[#5C5C5C] hover:text-primary hover:bg-white rounded-lg transition-colors"
+              title="Switch User"
+            >
+              <UserCog size={18} />
+            </button>
 
-              {showUserSwitcher && (
-                <>
-                  <div
-                    className="fixed inset-0 z-40"
-                    onClick={() => setShowUserSwitcher(false)}
-                  />
-                  <div className="absolute bottom-full right-0 mb-2 w-64 bg-white rounded-lg shadow-lg border border-[#EBEBEB] py-2 z-50">
-                    <div className="px-4 py-2 text-xs font-medium text-[#5C5C5C] uppercase border-b border-[#EBEBEB]">
-                      Switch User
-                    </div>
-                    <div className="max-h-64 overflow-y-auto">
-                      {users
-                        .filter((u) => u.status === 'active' && u.id !== currentUser.id)
-                        .map((user) => (
-                          <button
-                            key={user.id}
-                            onClick={() => handleSwitchUser(user.id)}
-                            className="w-full flex items-center gap-3 px-4 py-2 hover:bg-[#F7F7F7] transition-colors"
-                          >
-                            <img
-                              src={user.avatar}
-                              alt={user.name}
-                              className="w-8 h-8 rounded-full"
-                            />
-                            <div className="flex-1 text-left">
-                              <p className="text-sm font-medium text-[#171717]">{user.name}</p>
-                              <p className="text-xs text-[#5C5C5C]">{user.email}</p>
-                            </div>
-                          </button>
-                        ))}
-                    </div>
+            {showUserSwitcher && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setShowUserSwitcher(false)}
+                />
+                <div className="absolute bottom-full right-0 mb-2 w-64 bg-white rounded-lg shadow-lg border border-[#EBEBEB] py-2 z-50">
+                  <div className="px-4 py-2 text-xs font-medium text-[#5C5C5C] uppercase border-b border-[#EBEBEB]">
+                    Switch User
                   </div>
-                </>
-              )}
-            </div>
-          )}
+                  <div className="max-h-64 overflow-y-auto">
+                    {users
+                      .filter((u) => u.status === 'active' && u.id !== currentUser?.id)
+                      .map((user) => (
+                        <button
+                          key={user.id}
+                          onClick={() => handleSwitchUser(user.id)}
+                          className="w-full flex items-center gap-3 px-4 py-2 hover:bg-[#F7F7F7] transition-colors"
+                        >
+                          <img
+                            src={user.avatar}
+                            alt={user.name}
+                            className="w-8 h-8 rounded-full"
+                          />
+                          <div className="flex-1 text-left">
+                            <p className="text-sm font-medium text-[#171717]">{user.name}</p>
+                            <p className="text-xs text-[#5C5C5C]">{user.email}</p>
+                          </div>
+                        </button>
+                      ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </aside>

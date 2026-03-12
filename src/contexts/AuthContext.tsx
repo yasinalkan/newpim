@@ -65,7 +65,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const switchUser = (userId: number) => {
     const user = users.find(u => u.id === userId && u.status === 'active');
-    if (user && currentUser?.role === 'admin') {
+    if (user) {
       setCurrentUser(user);
     }
   };

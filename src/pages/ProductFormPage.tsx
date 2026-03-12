@@ -1,31 +1,44 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
-import { ArrowLeft, Save, Plus, X, Image as ImageIcon, GripVertical, Globe } from 'lucide-react';
+import { ArrowLeft, Save, Plus, X, Image as ImageIcon, GripVertical, Globe, Info } from 'lucide-react';
 import type { MultiLangText, ProductStatus } from '../types';
 import CategoryPicker from '../components/CategoryPicker';
+import LocalizedTextField from '../components/LocalizedTextField';
 
 const ProductFormPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { t, getText } = useLanguage();
+  const { t, getText, activeLanguages, defaultLanguage } = useLanguage();
   const { getProduct, createProduct, updateProduct, brands, categories, attributes, products, settings } = useData();
   const { currentUser } = useAuth();
 
   const isEdit = Boolean(id);
   const existingProduct = isEdit ? getProduct(parseInt(id!)) : null;
+  
+  // Check if current user is admin
+  const isAdmin = currentUser?.role === 'admin';
 
 
   // Form state
   const [sku, setSku] = useState('');
   const [baseSKU, setBaseSKU] = useState('');
-  const [name, setName] = useState<MultiLangText>({ tr: '', en: '' });
+  
+  // Initialize name and description as MultiLangText with all active languages
+  const initializeMultiLangText = (): MultiLangText => {
+    const text: MultiLangText = {};
+    activeLanguages.forEach(lang => {
+      text[lang.code] = '';
+    });
+    return text;
+  };
+  
+  const [name, setName] = useState<MultiLangText>(initializeMultiLangText());
   const [brandId, setBrandId] = useState<number>(0);
-  const [model, setModel] = useState('');
   const [categoryId, setCategoryId] = useState<number>(0);
-  const [description, setDescription] = useState<MultiLangText>({ tr: '', en: '' });
+  const [description, setDescription] = useState<MultiLangText>(initializeMultiLangText());
   const [price, setPrice] = useState('');
   const [stock, setStock] = useState('');
   const [status, setStatus] = useState<ProductStatus>('draft');
@@ -52,17 +65,32 @@ const ProductFormPage: React.FC = () => {
     if (existingProduct) {
       setSku(existingProduct.sku);
       setBaseSKU(existingProduct.baseSKU || '');
-      const existingName = typeof existingProduct.name === 'string' 
-        ? { tr: '', en: existingProduct.name } 
-        : { tr: '', en: existingProduct.name.en || existingProduct.name.tr || '' };
-      setName(existingName);
+      
+      // Convert string to MultiLangText if needed
+      if (typeof existingProduct.name === 'string') {
+        const converted: MultiLangText = initializeMultiLangText();
+        converted[defaultLanguage?.code || 'en'] = existingProduct.name;
+        setName(converted);
+      } else {
+        // Ensure all active languages are present
+        const existingName: MultiLangText = { ...initializeMultiLangText(), ...existingProduct.name };
+        setName(existingName);
+      }
+      
       setBrandId(existingProduct.brandId);
-      setModel(existingProduct.model || '');
       setCategoryId(existingProduct.categoryId);
-      const existingDescription = typeof existingProduct.description === 'string'
-        ? { tr: '', en: existingProduct.description }
-        : { tr: '', en: existingProduct.description.en || existingProduct.description.tr || '' };
-      setDescription(existingDescription);
+      
+      // Convert string to MultiLangText if needed
+      if (typeof existingProduct.description === 'string') {
+        const converted: MultiLangText = initializeMultiLangText();
+        converted[defaultLanguage?.code || 'en'] = existingProduct.description;
+        setDescription(converted);
+      } else {
+        // Ensure all active languages are present
+        const existingDescription: MultiLangText = { ...initializeMultiLangText(), ...existingProduct.description };
+        setDescription(existingDescription);
+      }
+      
       setPrice(existingProduct.price.toString());
       setStock(existingProduct.stock.toString());
       setStatus(existingProduct.status);
@@ -70,15 +98,31 @@ const ProductFormPage: React.FC = () => {
       setCustomAttributes((existingProduct as any).customAttributes || {});
       setProductImages(existingProduct.images || []);
     }
-  }, [existingProduct]);
+  }, [existingProduct, activeLanguages, defaultLanguage]);
 
-  // Get category-specific attributes
-  const categoryAttributes = attributes.filter((attr) => 
-    categoryId > 0 && attr.categoryIds.includes(categoryId)
+  // Get category-specific attributes (memoized to ensure updates when dependencies change)
+  const categoryAttributes = useMemo(() => {
+    if (categoryId <= 0) return [];
+    const category = categories.find(c => c.id === categoryId);
+    if (!category) return [];
+
+    // Collect all attribute IDs assigned to this category (required + variant)
+    const categoryAttrIds = new Set([
+      ...(category.requiredAttributeIds || []),
+      ...(category.variantAttributeIds || []),
+    ]);
+
+    // Include attributes that are in the category's lists OR have this categoryId in their own list
+    return attributes.filter(attr =>
+      categoryAttrIds.has(attr.id) || attr.categoryIds.includes(categoryId)
+    );
+  }, [attributes, categories, categoryId]);
+
+  // Get selected category (memoized to ensure updates when dependencies change)
+  const selectedCategory = useMemo(() => 
+    categories.find((c) => c.id === categoryId),
+    [categories, categoryId]
   );
-
-  // Get selected category
-  const selectedCategory = categories.find((c) => c.id === categoryId);
 
   // Check if product has all required fields for "complete" status (FR-1.2, FR-7.1)
   const canSetCompleteStatus = (): { canSet: boolean; missingFields: string[]; warnings: string[] } => {
@@ -86,10 +130,16 @@ const ProductFormPage: React.FC = () => {
     const warnings: string[] = [];
 
     if (!sku.trim()) missingFields.push('SKU');
-    if (!name.en.trim()) missingFields.push('Product Name');
+    
+    // Check if default language has product name
+    const defaultLangCode = defaultLanguage?.code || 'en';
+    if (!name[defaultLangCode]?.trim()) missingFields.push(`Product Name (${defaultLanguage?.name || 'Default Language'})`);
+    
     if (brandId === 0) missingFields.push('Brand');
     if (categoryId === 0) missingFields.push('Category');
-    if (!description.en.trim()) missingFields.push('Description');
+    
+    // Check if default language has description
+    if (!description[defaultLangCode]?.trim()) missingFields.push(`Description (${defaultLanguage?.name || 'Default Language'})`);
 
     // Check required attributes from category
     if (selectedCategory && selectedCategory.requiredAttributeIds) {
@@ -116,12 +166,19 @@ const ProductFormPage: React.FC = () => {
     setStatusError('');
     setStatusWarnings([]);
     
-    // If trying to set to "complete", validate required fields
-    if (newStatus === 'complete') {
+    // Standard users cannot set status to "complete" directly
+    if (!isAdmin && newStatus === 'complete') {
+      setStatusError('Only administrators can mark products as Complete. Set to Pending for admin review.');
+      return; // Don't change status
+    }
+    
+    // If trying to set to "complete" or "pending", validate required fields
+    if (newStatus === 'complete' || newStatus === 'pending') {
       const validation = canSetCompleteStatus();
       if (!validation.canSet) {
+        const statusLabel = newStatus === 'complete' ? 'Complete' : 'Pending';
         setStatusError(
-          `Cannot set status to "Complete". Missing required fields: ${validation.missingFields.join(', ')}`
+          `Cannot set status to "${statusLabel}". Missing required fields: ${validation.missingFields.join(', ')}`
         );
         return; // Don't change status
       }
@@ -136,25 +193,32 @@ const ProductFormPage: React.FC = () => {
 
   // Real-time validation feedback for status (FR-1.2, FR-7.1)
   useEffect(() => {
-    if (status === 'complete') {
+    if (status === 'complete' || status === 'pending') {
       const validation = canSetCompleteStatus();
       if (!validation.canSet) {
         // Update error message with current missing fields
+        const statusLabel = status === 'complete' ? 'Complete' : 'Pending';
         setStatusError(
-          `Missing required fields: ${validation.missingFields.join(', ')}`
+          `Missing required fields for ${statusLabel} status: ${validation.missingFields.join(', ')}`
         );
         setStatusWarnings([]);
       } else {
-        setStatusError('');
-        // Show warnings for missing optional EN translations (FR-7.1)
-        setStatusWarnings(validation.warnings);
+        // Check permission for complete status
+        if (status === 'complete' && !isAdmin) {
+          setStatusError('Only administrators can mark products as Complete. Set to Pending for admin review.');
+          setStatusWarnings([]);
+        } else {
+          setStatusError('');
+          // Show warnings for missing optional translations (FR-7.1)
+          setStatusWarnings(validation.warnings);
+        }
       }
     } else {
       setStatusError('');
       setStatusWarnings([]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sku, name.en, brandId, categoryId, description.en, productAttributes, status]);
+  }, [sku, name, brandId, categoryId, description, productAttributes, status, isAdmin]);
 
   // SKU uniqueness check
   const checkSkuUniqueness = (skuValue: string): boolean => {
@@ -205,7 +269,12 @@ const ProductFormPage: React.FC = () => {
       setSkuError('This SKU already exists. Please use a unique SKU.');
     }
     
-    if (!name.en.trim()) newErrors.name_en = 'Product name is required';
+    // Check if default language has product name
+    const defaultLangCode = defaultLanguage?.code || 'en';
+    if (!name[defaultLangCode]?.trim()) {
+      newErrors.name = `Product name is required in ${defaultLanguage?.name || 'default language'}`;
+    }
+    
     if (brandId === 0) newErrors.brand = 'Brand is required';
     if (categoryId === 0) newErrors.category = 'Category is required';
     
@@ -230,14 +299,25 @@ const ProductFormPage: React.FC = () => {
       return;
     }
 
-    // Validate status change to "complete" (FR-1.2)
-    if (status === 'complete') {
+    // Validate status change to "complete" or "pending" (FR-1.2)
+    if (status === 'complete' || status === 'pending') {
       const validation = canSetCompleteStatus();
       if (!validation.canSet) {
+        const statusLabel = status === 'complete' ? 'Complete' : 'Pending';
         setStatusError(
-          `Cannot save product with "Complete" status. Missing required fields: ${validation.missingFields.join(', ')}`
+          `Cannot save product with "${statusLabel}" status. Missing required fields: ${validation.missingFields.join(', ')}`
         );
         // Scroll to status section
+        setTimeout(() => {
+          const statusElement = document.querySelector('[data-status-section]');
+          statusElement?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100);
+        return;
+      }
+      
+      // Check permission for complete status
+      if (status === 'complete' && !isAdmin) {
+        setStatusError('Only administrators can mark products as Complete. Please set to Pending for admin review.');
         setTimeout(() => {
           const statusElement = document.querySelector('[data-status-section]');
           statusElement?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -258,7 +338,6 @@ const ProductFormPage: React.FC = () => {
       name,
       brand: brand?.name || '',
       brandId,
-      model: model || null,
       categoryId,
       description,
       price: productPrice,
@@ -361,20 +440,16 @@ const ProductFormPage: React.FC = () => {
                   </p>
                 </div>
 
-                {/* Name Field */}
-                <div>
-                  <label className="label">
-                    Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={name.en}
-                    onChange={(e) => setName({ ...name, en: e.target.value })}
-                    className={`input ${errors.name_en ? 'border-red-500' : ''}`}
-                    placeholder="Product Name"
-                  />
-                  {errors.name_en && <p className="text-sm text-red-600 mt-1">{errors.name_en}</p>}
-                </div>
+                {/* Name Field - Localized */}
+                <LocalizedTextField
+                  label="Product Name"
+                  value={name}
+                  onChange={setName}
+                  required={true}
+                  error={errors.name}
+                  type="input"
+                  placeholder="Product Name"
+                />
 
                 {/* Brand */}
                 <div>
@@ -394,18 +469,6 @@ const ProductFormPage: React.FC = () => {
                   {errors.brand && <p className="text-sm text-red-600 mt-1">{errors.brand}</p>}
                 </div>
 
-                {/* Model */}
-                <div>
-                  <label className="label">Model</label>
-                  <input
-                    type="text"
-                    value={model}
-                    onChange={(e) => setModel(e.target.value)}
-                    className="input"
-                    placeholder="Model"
-                  />
-                </div>
-
                 {/* Category */}
                 <div>
                   <CategoryPicker
@@ -420,20 +483,19 @@ const ProductFormPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Description */}
+            {/* Description - Localized */}
             <div className="card p-6">
               <h2 className="text-lg font-semibold text-[#171717] mb-4">Description</h2>
-              <div className="space-y-4">
-                <div>
-                  <label className="label">Description *</label>
-                  <textarea
-                    value={description.en}
-                    onChange={(e) => setDescription({ ...description, en: e.target.value })}
-                    className="input min-h-[120px]"
-                    placeholder="Product description..."
-                  />
-                </div>
-              </div>
+              <LocalizedTextField
+                label="Description"
+                value={description}
+                onChange={setDescription}
+                required={false}
+                type="textarea"
+                rows={5}
+                placeholder="Product description..."
+                helpText="Provide detailed product information"
+              />
             </div>
 
             {/* Attributes */}
@@ -847,8 +909,15 @@ const ProductFormPage: React.FC = () => {
                 className={`input ${statusError ? 'border-red-500' : ''}`}
               >
                 <option value="draft">Draft</option>
-                <option value="complete">Complete</option>
+                <option value="pending">Pending Review</option>
+                {isAdmin && <option value="complete">Complete</option>}
               </select>
+              {!isAdmin && (
+                <p className="text-xs text-[#5C5C5C] mt-2 flex items-start gap-1">
+                  <Info size={12} className="mt-0.5 flex-shrink-0" />
+                  <span>Set to "Pending Review" when ready. Admins will review and mark as Complete.</span>
+                </p>
+              )}
               {statusError && (
                 <p className="text-sm text-red-600 mt-2">{statusError}</p>
               )}
@@ -870,14 +939,19 @@ const ProductFormPage: React.FC = () => {
                   Draft products are work-in-progress and may be incomplete.
                 </p>
               )}
+              {status === 'pending' && !statusError && (
+                <p className="text-sm text-blue-600 mt-2">
+                  ✓ Product is ready for admin review. All required fields are complete.
+                </p>
+              )}
               {status === 'complete' && !statusError && statusWarnings.length === 0 && (
                 <p className="text-sm text-green-600 mt-2">
-                  ✓ Product has all required fields and is ready for use.
+                  ✓ Product has all required fields and is approved for use.
                 </p>
               )}
               {status === 'complete' && !statusError && statusWarnings.length > 0 && (
                 <p className="text-sm text-green-600 mt-2">
-                  ✓ Product has all required fields. English translations are recommended for better internationalization.
+                  ✓ Product is approved. English translations are recommended for better internationalization.
                 </p>
               )}
             </div>

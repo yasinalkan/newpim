@@ -194,7 +194,6 @@ const BulkImportPage: React.FC = () => {
               },
               brand: parsedProduct.brand,
               brandId: parsedProduct.brandId,
-              model: null,
               categoryId: parsedProduct.categoryId,
               description: {
                 tr: parsedProduct.descriptionTr || '',

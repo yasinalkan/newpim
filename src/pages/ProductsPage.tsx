@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -26,12 +26,15 @@ import {
   Upload,
   Download,
   Copy,
+  Clock,
 } from 'lucide-react';
 import Pagination from '../components/Pagination';
+import { calculateProductCompleteness, getCompletenessColor } from '../utils/completeness';
 import type { Product, ProductStatus } from '../types';
 
 const ProductsPage: React.FC = () => {
-  const { t, getText } = useLanguage();
+  const location = useLocation();
+  const { t, getText, defaultLanguage } = useLanguage();
   const { 
     products, 
     deleteProduct,
@@ -65,8 +68,13 @@ const ProductsPage: React.FC = () => {
   const [updatedDateToFilter, setUpdatedDateToFilter] = useState<string>('');
   const [baseProductFilter, setBaseProductFilter] = useState<number | 'all'>('all'); // FR-10.6: Filter by base product
   const [variantAttributeFilters, setVariantAttributeFilters] = useState<Record<number, string>>({}); // FR-10.6: Filter by variant attributes
+  const [productAttributeFilters, setProductAttributeFilters] = useState<Record<number, string>>({});
   const [showFilters, setShowFilters] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'active' | 'draft'>('active');
+  const [activeTab, setActiveTab] = useState<'active' | 'pending' | 'draft'>(
+    (location.state as { tab?: string } | null)?.tab === 'pending' ? 'pending'
+    : (location.state as { tab?: string } | null)?.tab === 'draft' ? 'draft'
+    : 'active'
+  );
   const [sortBy, setSortBy] = useState<'name' | 'sku' | 'brand' | 'category' | 'status' | 'price' | 'stock' | 'createdAt' | 'updatedAt'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [currentPage, setCurrentPage] = useState(1);
@@ -105,10 +113,16 @@ const ProductsPage: React.FC = () => {
   const canEdit = hasPermission('products', 'edit');
   const canDelete = hasPermission('products', 'update');
   const canCreate = currentUser?.role === 'admin' || hasPermission('products', 'edit');
+  const isAdmin = currentUser?.role === 'admin';
 
   // Filter and sort products
   const filteredProducts = useMemo(() => {
     let filtered = products.filter((product) => {
+      // Tab filter: Active tab shows complete products, Pending tab shows pending products, Draft tab shows draft
+      if (activeTab === 'active' && product.status !== 'complete') return false;
+      if (activeTab === 'pending' && product.status !== 'pending') return false;
+      if (activeTab === 'draft' && product.status !== 'draft') return false;
+
       // Search filter (FR-5.1: Product Search, FR-10.6: Variant Search)
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
@@ -253,6 +267,19 @@ const ProductsPage: React.FC = () => {
         }
       }
 
+      // Product attribute filters
+      for (const [attrId, filterValue] of Object.entries(productAttributeFilters)) {
+        if (filterValue && filterValue !== '') {
+          const productAttrValue = product.attributes?.[attrId]?.value;
+          if (productAttrValue === undefined || productAttrValue === null || productAttrValue === '') {
+            return false;
+          }
+          if (String(productAttrValue).toLowerCase() !== filterValue.toLowerCase()) {
+            return false;
+          }
+        }
+      }
+
       return true;
     });
 
@@ -282,8 +309,8 @@ const ProductsPage: React.FC = () => {
           break;
         case 'status':
           // Sort: 'complete' comes before 'draft' alphabetically, but we want 'complete' first
-          aValue = a.status === 'complete' ? 0 : 1;
-          bValue = b.status === 'complete' ? 0 : 1;
+          aValue = a.status === 'complete' ? 0 : a.status === 'pending' ? 1 : 2;
+          bValue = b.status === 'complete' ? 0 : b.status === 'pending' ? 1 : 2;
           break;
         case 'price':
           aValue = a.price;
@@ -311,7 +338,7 @@ const ProductsPage: React.FC = () => {
     });
 
     return filtered;
-  }, [products, categories, attributes, searchQuery, statusFilter, brandFilter, categoryFilter, stockMinFilter, stockMaxFilter, priceMinFilter, priceMaxFilter, createdDateFromFilter, createdDateToFilter, updatedDateFromFilter, updatedDateToFilter, baseProductFilter, variantAttributeFilters, sortBy, sortOrder, getText]);
+  }, [products, categories, attributes, searchQuery, activeTab, statusFilter, brandFilter, categoryFilter, stockMinFilter, stockMaxFilter, priceMinFilter, priceMaxFilter, createdDateFromFilter, createdDateToFilter, updatedDateFromFilter, updatedDateToFilter, baseProductFilter, variantAttributeFilters, productAttributeFilters, sortBy, sortOrder, getText]);
 
   // Group products by base product for hierarchical display
   const groupedProducts = useMemo(() => {
@@ -389,13 +416,13 @@ const ProductsPage: React.FC = () => {
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, statusFilter, brandFilter, categoryFilter, stockMinFilter, stockMaxFilter, priceMinFilter, priceMaxFilter, createdDateFromFilter, createdDateToFilter, updatedDateFromFilter, updatedDateToFilter]);
+  }, [searchQuery, activeTab, statusFilter, brandFilter, categoryFilter, stockMinFilter, stockMaxFilter, priceMinFilter, priceMaxFilter, createdDateFromFilter, createdDateToFilter, updatedDateFromFilter, updatedDateToFilter, productAttributeFilters]);
 
   // Clear selection when filters change (FR-3.5)
   useEffect(() => {
     setSelectedProductIds(new Set());
     setLastSelectedIndex(null);
-  }, [searchQuery, statusFilter, brandFilter, categoryFilter, stockMinFilter, stockMaxFilter, priceMinFilter, priceMaxFilter, createdDateFromFilter, createdDateToFilter, updatedDateFromFilter, updatedDateToFilter, baseProductFilter, variantAttributeFilters, sortBy, sortOrder]);
+  }, [searchQuery, statusFilter, brandFilter, categoryFilter, stockMinFilter, stockMaxFilter, priceMinFilter, priceMaxFilter, createdDateFromFilter, createdDateToFilter, updatedDateFromFilter, updatedDateToFilter, baseProductFilter, variantAttributeFilters, productAttributeFilters, sortBy, sortOrder]);
 
   // Handle product deletion with order checking (FR-3.1, FR-10.7)
   const handleDelete = (product: Product) => {
@@ -496,9 +523,10 @@ const ProductsPage: React.FC = () => {
     setUpdatedDateToFilter('');
     setBaseProductFilter('all');
     setVariantAttributeFilters({});
+    setProductAttributeFilters({});
   };
 
-  const hasActiveFilters = statusFilter !== 'all' || brandFilter !== 'all' || categoryFilter !== 'all' || stockMinFilter !== '' || stockMaxFilter !== '' || priceMinFilter !== '' || priceMaxFilter !== '' || createdDateFromFilter !== '' || createdDateToFilter !== '' || updatedDateFromFilter !== '' || updatedDateToFilter !== '' || baseProductFilter !== 'all' || Object.keys(variantAttributeFilters).length > 0;
+  const hasActiveFilters = statusFilter !== 'all' || brandFilter !== 'all' || categoryFilter !== 'all' || stockMinFilter !== '' || stockMaxFilter !== '' || priceMinFilter !== '' || priceMaxFilter !== '' || createdDateFromFilter !== '' || createdDateToFilter !== '' || updatedDateFromFilter !== '' || updatedDateToFilter !== '' || baseProductFilter !== 'all' || Object.keys(variantAttributeFilters).length > 0 || Object.values(productAttributeFilters).some(v => v !== '');
 
   // Bulk selection handlers (FR-3.5)
   const toggleProductSelection = (productId: number, index: number, event?: React.MouseEvent) => {
@@ -598,17 +626,20 @@ const ProductsPage: React.FC = () => {
           return { id, name: `Product #${id}`, sku: '', reason: 'Product not found', missingFields: [] };
         }
 
-        // Validate status change (draft -> complete requires all required fields)
-        if (targetStatus === 'complete' && product.status === 'draft') {
+        // Validate status change (draft/pending -> complete requires all required fields)
+        if (targetStatus === 'complete' && (product.status === 'draft' || product.status === 'pending')) {
           const missingFields: string[] = [];
           
-          if (!product.name.tr?.trim()) missingFields.push('Name (TR)');
-          if (!product.name.en?.trim()) missingFields.push('Name (EN)');
+          // Check required fields in default language
+          const defaultLangCode = defaultLanguage?.code || 'en';
+          const productName = typeof product.name === 'string' ? product.name : product.name[defaultLangCode];
+          const productDesc = typeof product.description === 'string' ? product.description : product.description[defaultLangCode];
+          
+          if (!productName?.trim()) missingFields.push(`Name (${defaultLanguage?.name || 'Default Language'})`);
           if (!product.sku?.trim()) missingFields.push('SKU');
           if (!product.categoryId) missingFields.push('Category');
           if (!product.brandId) missingFields.push('Brand');
-          if (!product.description.tr?.trim()) missingFields.push('Description (TR)');
-          if (!product.description.en?.trim()) missingFields.push('Description (EN)');
+          if (!productDesc?.trim()) missingFields.push(`Description (${defaultLanguage?.name || 'Default Language'})`);
 
           // Check required attributes from category
           if (product.categoryId) {
@@ -811,21 +842,18 @@ const ProductsPage: React.FC = () => {
 
   return (
     <div className="space-y-0">
+      {/* Header */}
+      {canCreate && (
+        <div className="flex items-center justify-end px-6 py-4">
+          <Link to="/products/new" className="btn btn-primary flex items-center gap-2">
+            <Plus size={18} />
+            Add Product
+          </Link>
+        </div>
+      )}
+
       {/* Tab Menu */}
       <div className="flex items-start px-6 py-2.5 bg-white border-b border-[#EBEBEB] gap-5">
-        <button
-          onClick={() => setActiveTab('overview')}
-          className={`flex items-center gap-1.5 px-0 py-0 text-sm font-medium leading-5 tracking-[-0.006em] transition-colors relative ${
-            activeTab === 'overview' 
-              ? 'text-[#171717]' 
-              : 'text-[#5C5C5C]'
-          }`}
-        >
-          <span>Overview</span>
-          {activeTab === 'overview' && (
-            <div className="absolute bottom-[-14px] left-0 right-0 h-0.5 bg-primary" />
-          )}
-        </button>
         <button
           onClick={() => setActiveTab('active')}
           className={`flex items-center gap-1.5 px-0 py-0 text-sm font-medium leading-5 tracking-[-0.006em] transition-colors relative ${
@@ -835,8 +863,29 @@ const ProductsPage: React.FC = () => {
           }`}
         >
           <span>Active</span>
+          <span className="text-xs text-[#A4A4A4]">
+            ({products.filter(p => p.status === 'complete').length})
+          </span>
           {activeTab === 'active' && (
             <div className="absolute bottom-[-14px] left-0 right-0 h-0.5 bg-primary" />
+          )}
+        </button>
+        <button
+          onClick={() => setActiveTab('pending')}
+          className={`flex items-center gap-1.5 px-0 py-0 text-sm font-medium leading-5 tracking-[-0.006em] transition-colors relative ${
+            activeTab === 'pending' 
+              ? 'text-[#171717]' 
+              : 'text-[#5C5C5C]'
+          }`}
+        >
+          <span>Pending Review</span>
+          <span className={`text-xs ${
+            activeTab === 'pending' ? 'text-blue-600' : 'text-[#A4A4A4]'
+          }`}>
+            ({products.filter(p => p.status === 'pending').length})
+          </span>
+          {activeTab === 'pending' && (
+            <div className="absolute bottom-[-14px] left-0 right-0 h-0.5 bg-blue-600" />
           )}
         </button>
         <button
@@ -848,6 +897,9 @@ const ProductsPage: React.FC = () => {
           }`}
         >
           <span>Draft</span>
+          <span className="text-xs text-[#A4A4A4]">
+            ({products.filter(p => p.status === 'draft').length})
+          </span>
           {activeTab === 'draft' && (
             <div className="absolute bottom-[-14px] left-0 right-0 h-0.5 bg-primary" />
           )}
@@ -1084,6 +1136,7 @@ const ProductsPage: React.FC = () => {
               >
                 <option value="all">All</option>
                 <option value="draft">Draft</option>
+                <option value="pending">Pending Review</option>
                 <option value="complete">Complete</option>
               </select>
             </div>
@@ -1121,6 +1174,49 @@ const ProductsPage: React.FC = () => {
                 ))}
               </select>
             </div>
+
+            {/* Product Attribute Filters */}
+            {attributes.length > 0 && (
+              <div className="space-y-4">
+                <label className="label">Attributes</label>
+                {attributes.map((attr) => {
+                  const uniqueValues = new Set<string>();
+                  products.forEach(p => {
+                    const val = p.attributes?.[attr.id]?.value;
+                    if (val !== undefined && val !== null && val !== '') {
+                      uniqueValues.add(String(val));
+                    }
+                  });
+                  if (uniqueValues.size === 0) return null;
+
+                  return (
+                    <div key={attr.id}>
+                      <label className="text-xs font-medium text-[#5C5C5C] mb-1 block">{getText(attr.name)}</label>
+                      <select
+                        value={productAttributeFilters[attr.id] || ''}
+                        onChange={(e) => {
+                          setProductAttributeFilters(prev => ({
+                            ...prev,
+                            [attr.id]: e.target.value,
+                          }));
+                        }}
+                        className="input"
+                      >
+                        <option value="">All</option>
+                        {Array.from(uniqueValues).sort().map((value) => {
+                          const option = attr.validation?.options?.find(opt => opt.value === value);
+                          return (
+                            <option key={value} value={value}>
+                              {option ? getText(option.label) : value}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
             {/* Stock Range Filter */}
             <div>
@@ -1302,19 +1398,43 @@ const ProductsPage: React.FC = () => {
         )}
       </div>
 
+      {/* Pending Tab Info Banner */}
+      {activeTab === 'pending' && groupedProducts.baseProducts.length > 0 && isAdmin && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <Clock size={20} className="text-blue-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <h4 className="font-semibold text-blue-900 mb-1">Products Awaiting Review</h4>
+              <p className="text-sm text-blue-800">
+                These products have been submitted by users and are ready for your review. 
+                Click "View" to review details, then "Approve" to mark as Complete or "Return to Draft" if changes are needed.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Products Table */}
       {groupedProducts.baseProducts.length === 0 ? (
         <div className="card p-12 text-center">
           <Package size={48} className="mx-auto text-[#A4A4A4] mb-4" />
           <h3 className="text-lg font-medium text-[#171717] mb-2">
-            {searchQuery || hasActiveFilters ? 'No products found' : 'No products'}
+            {searchQuery || hasActiveFilters 
+              ? 'No products found' 
+              : activeTab === 'pending'
+              ? 'No products pending review'
+              : 'No products'}
           </h3>
           <p className="text-[#5C5C5C] mb-6">
             {searchQuery || hasActiveFilters
               ? 'Try adjusting your search or filters'
+              : activeTab === 'pending'
+              ? isAdmin 
+                ? 'When users submit products for review, they will appear here for your approval.'
+                : 'Products you submit for review will appear here.'
               : 'Get started by creating your first product'}
           </p>
-          {canCreate && !searchQuery && !hasActiveFilters && (
+          {canCreate && !searchQuery && !hasActiveFilters && activeTab !== 'pending' && (
             <Link to="/products/new" className="btn btn-primary inline-flex items-center gap-2">
               <Plus size={18} />
               Create Product
@@ -1490,12 +1610,41 @@ const ProductsPage: React.FC = () => {
                         ) : '-'}
                       </td>
                       <td>
-                        <span
-                          className={`badge ${product.status === 'complete' ? 'badge-success' : 'badge-warning'
+                        <div className="space-y-1">
+                          <span
+                            className={`badge ${
+                              product.status === 'complete' 
+                                ? 'badge-success' 
+                                : product.status === 'pending'
+                                ? 'bg-blue-100 text-blue-700'
+                                : 'badge-warning'
                             } ${isVariant ? 'text-xs' : ''}`}
-                        >
-                          {product.status === 'complete' ? 'Complete' : 'Draft'}
-                        </span>
+                          >
+                            {product.status === 'complete' 
+                              ? 'Complete' 
+                              : product.status === 'pending' 
+                              ? 'Pending' 
+                              : 'Draft'}
+                          </span>
+                          {/* Show completeness for draft and pending products */}
+                          {(product.status === 'draft' || product.status === 'pending') && (() => {
+                            const completeness = calculateProductCompleteness(product, category, attributes, getText);
+                            const colors = getCompletenessColor(completeness.percentage);
+                            return (
+                              <div className="flex items-center gap-2 mt-1">
+                                <div className="flex-1 bg-gray-200 rounded-full overflow-hidden h-1.5 min-w-[60px]">
+                                  <div
+                                    className={`${colors.bar} h-1.5`}
+                                    style={{ width: `${completeness.percentage}%` }}
+                                  />
+                                </div>
+                                <span className={`text-xs font-medium ${colors.text} whitespace-nowrap`}>
+                                  {completeness.percentage}%
+                                </span>
+                              </div>
+                            );
+                          })()}
+                        </div>
                       </td>
                       <td>
                         {editingStock === product.id ? (

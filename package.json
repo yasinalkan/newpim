@@ -1,7 +1,7 @@
 {
-  "name": "vakko-pim-system",
+  "name": "omnitive-pim-system",
   "version": "1.0.0",
-  "description": "Product Information Management System for Vakko",
+  "description": "Product Information Management System by Omnitive",
   "private": true,
   "type": "module",
   "scripts": {

@@ -5,6 +5,7 @@ import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { ArrowLeft, Edit, Trash2, Package, Info, Tags, Image as ImageIcon, Clock, Plus, Layers, CheckCircle, FileText, DollarSign } from 'lucide-react';
 import { format } from 'date-fns';
+import { calculateProductCompleteness, getCompletenessColor } from '../utils/completeness';
 import type { ProductStatus } from '../types';
 
 type TabType = 'overview' | 'attributes' | 'images' | 'history' | 'pricing';
@@ -26,6 +27,7 @@ const ProductDetailPage: React.FC = () => {
   const canEdit = hasPermission('products', 'edit');
   const canDelete = hasPermission('products', 'update');
   const canUpdate = hasPermission('products', 'update');
+  const isAdmin = currentUser?.role === 'admin';
   
   const [statusChangeSuccess, setStatusChangeSuccess] = useState(false);
 
@@ -137,9 +139,15 @@ const ProductDetailPage: React.FC = () => {
     if (currentStatus === newStatus) {
       return;
     }
+    
+    // Check permission - only admins can set to complete
+    if (newStatus === 'complete' && !isAdmin) {
+      alert('Only administrators can mark products as Complete. Please set to Pending for admin review.');
+      return;
+    }
 
-    // Validate if trying to set to "complete"
-    if (newStatus === 'complete') {
+    // Validate if trying to set to "complete" or "pending"
+    if (newStatus === 'complete' || newStatus === 'pending') {
       // Check required fields
       const missingFields: string[] = [];
       if (!product.sku.trim()) missingFields.push('SKU');
@@ -162,7 +170,8 @@ const ProductDetailPage: React.FC = () => {
       }
 
       if (missingFields.length > 0) {
-        alert(`Cannot set status to "Complete". Missing required fields: ${missingFields.join(', ')}`);
+        const statusLabel = newStatus === 'complete' ? 'Complete' : 'Pending';
+        alert(`Cannot set status to "${statusLabel}". Missing required fields: ${missingFields.join(', ')}`);
         return;
       }
     }
@@ -170,12 +179,18 @@ const ProductDetailPage: React.FC = () => {
     // Confirmation dialog (FR-2.2)
     const statusLabels = {
       draft: 'Draft',
+      pending: 'Pending Review',
       complete: 'Complete'
     };
     
-    const confirmMessage = newStatus === 'complete'
-      ? `Mark this product as "${statusLabels[newStatus]}"? This indicates the product is finalized and ready for use.`
-      : `Revert this product to "${statusLabels[newStatus]}"? This indicates the product is work-in-progress and may be incomplete.`;
+    let confirmMessage = '';
+    if (newStatus === 'complete') {
+      confirmMessage = `Approve this product as "${statusLabels[newStatus]}"? This indicates the product is finalized and ready for use.`;
+    } else if (newStatus === 'pending') {
+      confirmMessage = `Mark this product as "${statusLabels[newStatus]}"? This will notify admins that it's ready for review.`;
+    } else {
+      confirmMessage = `Revert this product to "${statusLabels[newStatus]}"? This indicates the product is work-in-progress and may be incomplete.`;
+    }
 
     if (window.confirm(confirmMessage)) {
       // Update status (FR-2.2)
@@ -186,9 +201,18 @@ const ProductDetailPage: React.FC = () => {
 
       // Show success message
       setStatusChangeSuccess(true);
+      
+      // Navigate back to products list with appropriate tab after short delay
       setTimeout(() => {
-        setStatusChangeSuccess(false);
-      }, 3000);
+        // Navigate to the appropriate tab based on new status
+        if (newStatus === 'pending') {
+          navigate('/products', { state: { tab: 'pending' } });
+        } else if (newStatus === 'complete') {
+          navigate('/products', { state: { tab: 'active' } });
+        } else {
+          navigate('/products', { state: { tab: 'draft' } });
+        }
+      }, 1500);
 
       // Status change is logged via updatedAt timestamp (FR-2.2)
       // The history tab will show the status change through updatedAt
@@ -235,6 +259,35 @@ const ProductDetailPage: React.FC = () => {
         </button>
       </div>
 
+      {/* Product Header */}
+      <div className="card p-6">
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <h1 className="text-2xl font-bold text-[#171717] mb-2">
+              {getText(product.name)}
+            </h1>
+            <div className="flex items-center gap-4 text-sm text-[#5C5C5C]">
+              <span className="font-medium">SKU: {product.sku}</span>
+              <span>•</span>
+              <span>Brand: {product.brand}</span>
+              {product.baseSKU && (
+                <>
+                  <span>•</span>
+                  <span>Base SKU: {product.baseSKU}</span>
+                </>
+              )}
+            </div>
+          </div>
+          {product.images[0] && (
+            <img
+              src={product.images[0]}
+              alt={getText(product.name)}
+              className="w-24 h-24 object-cover rounded-lg"
+            />
+          )}
+        </div>
+      </div>
+
       {/* Success Message */}
       {statusChangeSuccess && (
         <div className="card p-4 bg-green-50 border border-green-200">
@@ -251,31 +304,105 @@ const ProductDetailPage: React.FC = () => {
           <span className="text-sm text-[#5C5C5C]">Status:</span>
           <span
             className={`badge ${
-              product.status === 'complete' ? 'badge-success' : 'badge-warning'
+              product.status === 'complete' 
+                ? 'badge-success' 
+                : product.status === 'pending'
+                ? 'bg-blue-100 text-blue-700'
+                : 'badge-warning'
             }`}
           >
-            {product.status === 'complete' ? 'Complete' : 'Draft'}
+            {product.status === 'complete' 
+              ? 'Complete' 
+              : product.status === 'pending' 
+              ? 'Pending Review' 
+              : 'Draft'}
           </span>
           {canUpdate && (
             <>
-              {product.status === 'draft' ? (
-                <button
-                  onClick={() => handleStatusChange('complete')}
-                  className="btn btn-sm btn-primary flex items-center gap-1"
-                  title="Mark as Complete"
-                >
-                  <CheckCircle size={14} />
-                  Mark Complete
-                </button>
-              ) : (
-                <button
-                  onClick={() => handleStatusChange('draft')}
-                  className="btn btn-sm btn-secondary flex items-center gap-1"
-                  title="Revert to Draft"
-                >
-                  <FileText size={14} />
-                  Revert to Draft
-                </button>
+              {product.status === 'draft' && (
+                <>
+                  {isAdmin && (
+                    <button
+                      onClick={() => handleStatusChange('complete')}
+                      className="btn btn-sm btn-primary flex items-center gap-1"
+                      title="Mark as Complete"
+                    >
+                      <CheckCircle size={14} />
+                      Approve as Complete
+                    </button>
+                  )}
+                  <button
+                    onClick={() => handleStatusChange('pending')}
+                    className="btn btn-sm bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-1"
+                    title="Submit for Review"
+                  >
+                    <Clock size={14} />
+                    Submit for Review
+                  </button>
+                </>
+              )}
+              {product.status === 'pending' && (
+                <>
+                  {isAdmin && (
+                    <>
+                      <button
+                        onClick={() => handleStatusChange('complete')}
+                        className="btn btn-sm btn-primary flex items-center gap-1"
+                        title="Approve as Complete"
+                      >
+                        <CheckCircle size={14} />
+                        Approve
+                      </button>
+                      <button
+                        onClick={() => handleStatusChange('draft')}
+                        className="btn btn-sm btn-secondary flex items-center gap-1"
+                        title="Return to Draft"
+                      >
+                        <FileText size={14} />
+                        Return to Draft
+                      </button>
+                    </>
+                  )}
+                  {!isAdmin && (
+                    <button
+                      onClick={() => handleStatusChange('draft')}
+                      className="btn btn-sm btn-secondary flex items-center gap-1"
+                      title="Revert to Draft"
+                    >
+                      <FileText size={14} />
+                      Revert to Draft
+                    </button>
+                  )}
+                </>
+              )}
+              {product.status === 'complete' && (
+                <>
+                  {isAdmin && (
+                    <>
+                      <button
+                        onClick={() => handleStatusChange('pending')}
+                        className="btn btn-sm bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-1"
+                        title="Move to Pending"
+                      >
+                        <Clock size={14} />
+                        Move to Pending
+                      </button>
+                      <button
+                        onClick={() => handleStatusChange('draft')}
+                        className="btn btn-sm btn-secondary flex items-center gap-1"
+                        title="Revert to Draft"
+                      >
+                        <FileText size={14} />
+                        Revert to Draft
+                      </button>
+                    </>
+                  )}
+                  {!isAdmin && (
+                    <span className="text-xs text-[#5C5C5C] italic">
+                      Contact an admin to change status
+                    </span>
+                  )}
+                </>
               )}
             </>
           )}
@@ -300,6 +427,82 @@ const ProductDetailPage: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Completeness Card for Draft/Pending Products */}
+      {(product.status === 'draft' || product.status === 'pending') && (() => {
+        const completeness = calculateProductCompleteness(product, category, attributes, getText);
+        const colors = getCompletenessColor(completeness.percentage);
+        
+        return (
+          <div className={`card p-6 ${colors.bg} border ${colors.border}`}>
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1">
+                <h3 className={`font-semibold ${colors.text} mb-2`}>
+                  Product Completeness: {completeness.percentage}%
+                </h3>
+                <p className="text-sm text-[#5C5C5C] mb-4">
+                  {completeness.completedFields} of {completeness.totalFields} required fields completed
+                </p>
+                
+                {/* Progress Bar */}
+                <div className="mb-4">
+                  <div className="bg-white rounded-full overflow-hidden h-3 shadow-inner">
+                    <div
+                      className={`${colors.bar} h-3 transition-all duration-300 flex items-center justify-end pr-2`}
+                      style={{ width: `${completeness.percentage}%` }}
+                    >
+                      {completeness.percentage > 20 && (
+                        <span className="text-xs font-semibold text-white">
+                          {completeness.percentage}%
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Missing Fields */}
+                {completeness.missingFields.length > 0 && (
+                  <div>
+                    <p className={`text-sm font-medium ${colors.text} mb-2`}>
+                      Missing Required Fields:
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {completeness.missingFields.map((field, index) => (
+                        <span
+                          key={index}
+                          className={`px-3 py-1 rounded-full text-sm font-medium ${colors.bg} ${colors.text} border ${colors.border}`}
+                        >
+                          {field}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {completeness.percentage === 100 && (
+                  <div className="flex items-center gap-2 text-green-700">
+                    <CheckCircle size={18} />
+                    <span className="text-sm font-medium">
+                      All required fields completed! Ready to submit for review.
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Quick Action */}
+              {completeness.percentage === 100 && product.status === 'draft' && canUpdate && (
+                <button
+                  onClick={() => handleStatusChange('pending')}
+                  className="btn btn-sm bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2"
+                >
+                  <Clock size={16} />
+                  Submit for Review
+                </button>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Tabs */}
       <div className="card">
@@ -419,10 +622,6 @@ const ProductDetailPage: React.FC = () => {
                   <div>
                     <p className="text-sm text-[#5C5C5C]">Brand</p>
                     <p className="font-medium text-[#171717]">{product.brand}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-[#5C5C5C]">Model</p>
-                    <p className="font-medium text-[#171717]">{product.model || '-'}</p>
                   </div>
                   <div>
                     <p className="text-sm text-[#5C5C5C]">Category</p>

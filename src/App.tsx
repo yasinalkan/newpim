@@ -19,6 +19,7 @@ import CategoryMappingPage from './pages/CategoryMappingPage';
 import AttributeMappingPage from './pages/AttributeMappingPage';
 import VariantFormPage from './pages/VariantFormPage';
 import BulkImportPage from './pages/BulkImportPage';
+import BulkActionsPage from './pages/BulkActionsPage';
 import Layout from './components/Layout';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -46,6 +47,7 @@ const AppRoutes = () => {
                 <Route path="/products/:id/variants/new" element={<VariantFormPage />} />
                 <Route path="/products/:id/variants/:variantId/edit" element={<VariantFormPage />} />
                 <Route path="/products/import" element={<BulkImportPage />} />
+                <Route path="/products/bulk-actions" element={<BulkActionsPage />} />
                 <Route path="/categories" element={<CategoriesPage />} />
                 <Route path="/categories/:id" element={<CategoryDetailPage />} />
                 <Route path="/attributes" element={<AttributesPage />} />

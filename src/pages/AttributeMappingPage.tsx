@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
-import { Settings as SettingsIcon, ArrowRight } from 'lucide-react';
+import { Settings as SettingsIcon, GitMerge } from 'lucide-react';
 import UnifiedAttributeMapping from '../components/settings/channels/UnifiedAttributeMapping';
 
 const AttributeMappingPage: React.FC = () => {
@@ -64,7 +64,7 @@ const AttributeMappingPage: React.FC = () => {
         <UnifiedAttributeMapping selectedChannelId={selectedChannelId} />
       ) : (
         <div className="card p-12 text-center">
-          <ArrowRight size={48} className="mx-auto text-[#A4A4A4] mb-4" />
+          <GitMerge size={48} className="mx-auto text-[#A4A4A4] mb-4" />
           <h3 className="text-lg font-medium text-[#171717] mb-2">Select a Channel</h3>
           <p className="text-[#5C5C5C]">
             Please select a channel from the dropdown above to manage attribute and value mappings.

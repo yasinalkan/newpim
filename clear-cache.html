@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clear Cache - PIM System</title>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .success {
+            background: #28a745;
+            padding: 10px;
+            border-radius: 4px;
+            color: white;
+            margin-top: 20px;
+            display: none;
+        }
+        .info {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 20px;
+            border-left: 4px solid #007bff;
+        }
+        ul {
+            margin-top: 10px;
+            line-height: 1.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Clear Browser Cache</h1>
+        <p>If you're seeing old versions of the app, click the buttons below to clear all cached data:</p>
+        
+        <button onclick="clearAllCache()">Clear All Caches</button>
+        <button onclick="unregisterServiceWorkers()">Unregister Service Workers</button>
+        <button onclick="reloadApp()">Reload App</button>
+        
+        <div id="success" class="success"></div>
+        
+        <div class="info">
+            <strong>Quick Fix Steps:</strong>
+            <ul>
+                <li>Click "Clear All Caches" button above</li>
+                <li>Click "Unregister Service Workers" button</li>
+                <li>Click "Reload App" to open a fresh version</li>
+                <li>Or use Ctrl+Shift+R (Windows) / Cmd+Shift+R (Mac) for hard reload</li>
+            </ul>
+        </div>
+        
+        <div class="info" style="margin-top: 15px;">
+            <strong>Browser Settings (Alternative):</strong>
+            <ul>
+                <li><strong>Chrome/Edge:</strong> Open DevTools (F12) → Application tab → Clear storage → Clear site data</li>
+                <li><strong>Firefox:</strong> Open DevTools (F12) → Storage tab → Right-click → Clear All</li>
+                <li><strong>Safari:</strong> Develop menu → Empty Caches</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        const showSuccess = (message) => {
+            const successDiv = document.getElementById('success');
+            successDiv.textContent = message;
+            successDiv.style.display = 'block';
+            setTimeout(() => {
+                successDiv.style.display = 'none';
+            }, 3000);
+        };
+
+        async function clearAllCache() {
+            try {
+                // Clear Cache Storage API
+                if ('caches' in window) {
+                    const cacheNames = await caches.keys();
+                    await Promise.all(cacheNames.map(name => caches.delete(name)));
+                    showSuccess(`✓ Cleared ${cacheNames.length} cache(s)`);
+                }
+                
+                // Clear localStorage
+                localStorage.clear();
+                
+                // Clear sessionStorage
+                sessionStorage.clear();
+                
+                console.log('All caches cleared successfully');
+            } catch (error) {
+                console.error('Error clearing caches:', error);
+                alert('Error clearing caches. Check console for details.');
+            }
+        }
+
+        async function unregisterServiceWorkers() {
+            try {
+                if ('serviceWorker' in navigator) {
+                    const registrations = await navigator.serviceWorker.getRegistrations();
+                    await Promise.all(registrations.map(reg => reg.unregister()));
+                    showSuccess(`✓ Unregistered ${registrations.length} service worker(s)`);
+                    console.log('All service workers unregistered');
+                } else {
+                    showSuccess('✓ No service workers found');
+                }
+            } catch (error) {
+                console.error('Error unregistering service workers:', error);
+                alert('Error unregistering service workers. Check console for details.');
+            }
+        }
+
+        function reloadApp() {
+            // Clear cache and reload
+            clearAllCache().then(() => {
+                window.location.href = 'http://localhost:3000';
+            });
+        }
+
+        // Run automatic cleanup on page load
+        window.addEventListener('load', () => {
+            console.log('Cache clearing utility loaded');
+        });
+    </script>
+</body>
+</html>

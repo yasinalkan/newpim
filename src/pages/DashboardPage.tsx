@@ -36,6 +36,7 @@ const DashboardPage: React.FC = () => {
   ];
 
   const draftProducts = products.filter((p) => p.status === 'draft');
+  const pendingProducts = products.filter((p) => p.status === 'pending');
   const completeProducts = products.filter((p) => p.status === 'complete');
   const lowStockProducts = products.filter((p) => p.stock < 10 && p.stock > 0);
   const outOfStockProducts = products.filter((p) => p.stock === 0);
@@ -75,7 +76,7 @@ const DashboardPage: React.FC = () => {
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
         <div className="card p-4">
           <div className="flex items-center justify-between">
             <div>
@@ -85,6 +86,16 @@ const DashboardPage: React.FC = () => {
             <div className="badge badge-warning">Draft</div>
           </div>
         </div>
+
+        <Link to="/products?status=pending" className="card p-4 hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-[#5C5C5C]">Pending</p>
+              <p className="text-2xl font-bold text-blue-600">{pendingProducts.length}</p>
+            </div>
+            <div className="badge badge-info">Pending</div>
+          </div>
+        </Link>
 
         <div className="card p-4">
           <div className="flex items-center justify-between">
@@ -168,10 +179,18 @@ const DashboardPage: React.FC = () => {
                   <td>
                     <span
                       className={`badge ${
-                        product.status === 'complete' ? 'badge-success' : 'badge-warning'
+                        product.status === 'complete'
+                          ? 'badge-success'
+                          : product.status === 'pending'
+                          ? 'badge-info'
+                          : 'badge-warning'
                       }`}
                     >
-                      {product.status === 'complete' ? 'Complete' : 'Draft'}
+                      {product.status === 'complete'
+                        ? 'Complete'
+                        : product.status === 'pending'
+                        ? 'Pending'
+                        : 'Draft'}
                     </span>
                   </td>
                   <td>

@@ -21,12 +21,12 @@ The application will be available at `http://localhost:3000`
 Use one of these demo accounts:
 
 **Admin Account:**
-- Email: `admin@vakko.com`
+- Email: `admin@omnitive.com`
 - Password: `admin123`
 - Has full access to all features
 
 **Standard User Account:**
-- Email: `user@vakko.com`
+- Email: `user@omnitive.com`
 - Password: `user123`
 - Has limited permissions (customizable by admin)
 
@@ -259,5 +259,5 @@ For issues or questions, refer to:
 ---
 
 **Product Hub PIM System** v1.0  
-Built for Vakko - Product Information Management
+Built by Omnitive - Product Information Management
 

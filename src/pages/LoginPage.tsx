@@ -43,7 +43,7 @@ const LoginPage: React.FC = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="input"
-              placeholder="admin@vakko.com"
+              placeholder="admin@omnitive.com"
               required
             />
           </div>
@@ -80,10 +80,10 @@ const LoginPage: React.FC = () => {
           <p className="text-xs text-[#5C5C5C] font-medium mb-2">Demo Accounts:</p>
           <div className="space-y-2 text-xs text-[#5C5C5C]">
             <div>
-              <span className="font-medium">Admin:</span> admin@vakko.com / admin123
+              <span className="font-medium">Admin:</span> admin@omnitive.com / admin123
             </div>
             <div>
-              <span className="font-medium">User:</span> user@vakko.com / user123
+              <span className="font-medium">User:</span> user@omnitive.com / user123
             </div>
           </div>
         </div>

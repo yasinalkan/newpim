@@ -530,15 +530,29 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const level = calculateCategoryLevel(categoryData.parentId, categories);
     const path = generateCategoryPath(categoryData.name, categoryData.parentId, categories);
 
+    const newCategoryId = Math.max(...categories.map(c => c.id), 0) + 1;
     const newCategory: Category = {
       ...categoryData,
       level,
       path,
-      id: Math.max(...categories.map(c => c.id), 0) + 1,
+      id: newCategoryId,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
     setCategories([...categories, newCategory]);
+
+    // Sync attribute.categoryIds for all attributes assigned to this category
+    const assignedAttrIds = new Set([
+      ...(categoryData.requiredAttributeIds || []),
+      ...(categoryData.variantAttributeIds || []),
+    ]);
+    if (assignedAttrIds.size > 0) {
+      setAttributes(prev => prev.map(attr =>
+        assignedAttrIds.has(attr.id) && !attr.categoryIds.includes(newCategoryId)
+          ? { ...attr, categoryIds: [...attr.categoryIds, newCategoryId], updatedAt: new Date().toISOString() }
+          : attr
+      ));
+    }
   };
 
   const updateCategory = (id: number, updates: Partial<Category>) => {
@@ -626,6 +640,39 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     setCategories(updatedCategories);
+
+    // Sync attribute.categoryIds if assigned attributes changed
+    if (updates.requiredAttributeIds !== undefined || updates.variantAttributeIds !== undefined) {
+      const category = categories.find(c => c.id === id);
+      if (category) {
+        const oldAttrIds = new Set([
+          ...(category.requiredAttributeIds || []),
+          ...(category.variantAttributeIds || []),
+        ]);
+        const newAttrIds = new Set([
+          ...(updates.requiredAttributeIds ?? category.requiredAttributeIds ?? []),
+          ...(updates.variantAttributeIds ?? category.variantAttributeIds ?? []),
+        ]);
+
+        const added = [...newAttrIds].filter(attrId => !oldAttrIds.has(attrId));
+        const removed = [...oldAttrIds].filter(attrId => !newAttrIds.has(attrId));
+
+        if (added.length > 0 || removed.length > 0) {
+          setAttributes(prev => prev.map(attr => {
+            let categoryIds = [...attr.categoryIds];
+            if (added.includes(attr.id) && !categoryIds.includes(id)) {
+              categoryIds = [...categoryIds, id];
+            }
+            if (removed.includes(attr.id)) {
+              categoryIds = categoryIds.filter(cid => cid !== id);
+            }
+            return categoryIds === attr.categoryIds
+              ? attr
+              : { ...attr, categoryIds, updatedAt: new Date().toISOString() };
+          }));
+        }
+      }
+    }
   };
 
   const deleteCategory = (id: number) => {

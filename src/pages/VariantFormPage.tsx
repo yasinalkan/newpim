@@ -107,7 +107,6 @@ const VariantFormPage: React.FC = () => {
       name: baseProduct.name,
       brand: baseProduct.brand,
       brandId: baseProduct.brandId,
-      model: baseProduct.model,
       categoryId: baseProduct.categoryId,
       description: baseProduct.description,
       keywords: baseProduct.keywords,

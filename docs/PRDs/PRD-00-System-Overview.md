@@ -26,7 +26,7 @@
 ## 2. Overview
 
 ### Purpose
-Product Hub is a comprehensive Product Information Management (PIM) system designed for Vakko, enabling centralized product data management and product information workflows. The system facilitates the complete product lifecycle from creation to publication and maintenance.
+Product Hub is a comprehensive Product Information Management (PIM) system designed by Omnitive, enabling centralized product data management and product information workflows. The system facilitates the complete product lifecycle from creation to publication and maintenance.
 
 ### Scope
 This document provides a high-level overview of the Product Hub PIM system, including:

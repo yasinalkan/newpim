@@ -45,7 +45,7 @@ const Header: React.FC = () => {
             {pageTitle}
           </h2>
           <p className="text-sm font-normal leading-5 text-[#5C5C5C] tracking-[-0.006em]">
-            Insert page description here.
+           
           </p>
         </div>
       </div>

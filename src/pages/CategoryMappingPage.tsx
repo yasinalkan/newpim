@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
-import { Settings as SettingsIcon, ArrowRight } from 'lucide-react';
+import { Settings as SettingsIcon, GitBranch } from 'lucide-react';
 import CategoryMapping from '../components/settings/channels/CategoryMapping';
 
 const CategoryMappingPage: React.FC = () => {
@@ -64,7 +64,7 @@ const CategoryMappingPage: React.FC = () => {
         <CategoryMapping selectedChannelId={selectedChannelId} />
       ) : (
         <div className="card p-12 text-center">
-          <ArrowRight size={48} className="mx-auto text-[#A4A4A4] mb-4" />
+          <GitBranch size={48} className="mx-auto text-[#A4A4A4] mb-4" />
           <h3 className="text-lg font-medium text-[#171717] mb-2">Select a Channel</h3>
           <p className="text-[#5C5C5C]">
             Please select a channel from the dropdown above to manage category mappings.
