@@ -23,13 +23,15 @@ import {
   type ParsedStatusUpdate,
   type ValidationError,
 } from '../utils/csvParser';
-import type { ProductStatus } from '../types';
+import type { ProductStatus, Currency } from '../types';
 
 type ImportMode = 'products' | 'status';
 
 const BulkImportPage: React.FC = () => {
   const { t, getText } = useLanguage();
-  const { products, brands, categories, createProduct, updateProduct, getProduct } = useData();
+  const { products, brands, categories, createProduct, updateProduct, getProduct, settings } = useData();
+  const activeCurrencies = settings.currencies?.filter((c: Currency) => c.isActive) || [];
+  const defaultCurrency = activeCurrencies.find((c: Currency) => c.isDefault) || activeCurrencies[0];
   const { currentUser } = useAuth();
   const navigate = useNavigate();
 
@@ -159,6 +161,8 @@ const BulkImportPage: React.FC = () => {
           
           if (existingProduct) {
             // Update existing product
+            const importPrice = parsedProduct.price || 0;
+            const importPrices = { ...(existingProduct.prices || {}), [defaultCurrency?.code || 'TRY']: importPrice };
             updateProduct(existingProduct.id, {
               name: {
                 tr: parsedProduct.nameTr,
@@ -171,7 +175,8 @@ const BulkImportPage: React.FC = () => {
                 tr: parsedProduct.descriptionTr || '',
                 en: parsedProduct.descriptionEn || '',
               },
-              price: parsedProduct.price || 0,
+              price: importPrice,
+              prices: importPrices,
               stock: parsedProduct.stock || 0,
               status: parsedProduct.status || 'draft',
               images: parsedProduct.images || [],
@@ -186,6 +191,7 @@ const BulkImportPage: React.FC = () => {
               continue;
             }
 
+            const newPrice = parsedProduct.price || 0;
             createProduct({
               sku: parsedProduct.sku,
               name: {
@@ -201,7 +207,8 @@ const BulkImportPage: React.FC = () => {
               },
               keywords: null,
               stock: parsedProduct.stock || 0,
-              price: parsedProduct.price || 0,
+              price: newPrice,
+              prices: { [defaultCurrency?.code || 'TRY']: newPrice },
               images: parsedProduct.images || [],
               imageUrl: parsedProduct.images?.[0] || '',
               attributes: {},
@@ -456,7 +463,7 @@ const BulkImportPage: React.FC = () => {
                         <td>{product.nameEn}</td>
                         <td>{product.brand}</td>
                         <td>{product.category}</td>
-                        <td>₺{product.price?.toLocaleString() || '0'}</td>
+                        <td>{defaultCurrency?.symbol || '₺'}{product.price?.toLocaleString() || '0'}</td>
                         <td>{product.stock || '0'}</td>
                         <td>
                           <span className={`badge ${product.status === 'complete' ? 'badge-success' : 'badge-warning'}`}>

@@ -4,13 +4,15 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { ArrowLeft, Save, Plus, X, Image as ImageIcon } from 'lucide-react';
-import type { ProductStatus } from '../types';
+import type { ProductStatus, Currency } from '../types';
 
 const VariantFormPage: React.FC = () => {
   const { id, variantId } = useParams<{ id: string; variantId?: string }>();
   const navigate = useNavigate();
   const { t, getText } = useLanguage();
   const { getProduct, createProduct, updateProduct, attributes, products, settings } = useData();
+  const activeCurrencies = settings.currencies?.filter((c: Currency) => c.isActive) || [];
+  const defaultCurrency = activeCurrencies.find((c: Currency) => c.isDefault) || activeCurrencies[0];
   const { currentUser } = useAuth();
 
   const baseProduct = getProduct(parseInt(id!));
@@ -26,9 +28,15 @@ const VariantFormPage: React.FC = () => {
       (attr.type === 'select' || attr.type === 'multiselect')
   );
 
+  const initializePrices = (): Record<string, string> => {
+    const p: Record<string, string> = {};
+    activeCurrencies.forEach((c: Currency) => { p[c.code] = ''; });
+    return p;
+  };
+
   // Form state
   const [sku, setSku] = useState('');
-  const [price, setPrice] = useState('');
+  const [prices, setPrices] = useState<Record<string, string>>(initializePrices);
   const [stock, setStock] = useState('');
   const [status, setStatus] = useState<ProductStatus>('draft');
   const [variantAttributeValues, setVariantAttributeValues] = useState<Record<string, string | number>>({});
@@ -38,7 +46,15 @@ const VariantFormPage: React.FC = () => {
   useEffect(() => {
     if (existingVariant && baseProduct) {
       setSku(existingVariant.sku);
-      setPrice(existingVariant.price.toString());
+      const loadedPrices: Record<string, string> = {};
+      activeCurrencies.forEach((c: Currency) => {
+        const val = existingVariant.prices?.[c.code];
+        loadedPrices[c.code] = val !== undefined && val !== null ? val.toString() : '';
+      });
+      if (Object.values(loadedPrices).every(v => v === '') && existingVariant.price) {
+        if (defaultCurrency) loadedPrices[defaultCurrency.code] = existingVariant.price.toString();
+      }
+      setPrices(loadedPrices);
       setStock(existingVariant.stock.toString());
       setStatus(existingVariant.status);
       setVariantAttributeValues(existingVariant.variantAttributes || {});
@@ -88,7 +104,16 @@ const VariantFormPage: React.FC = () => {
       newErrors.variant = 'A variant with this combination already exists';
     }
 
-    if (!price || parseFloat(price) <= 0) newErrors.price = 'Valid price is required';
+    const baseCurrencyVal = defaultCurrency ? prices[defaultCurrency.code] : '';
+    if (!baseCurrencyVal || parseFloat(baseCurrencyVal) <= 0) {
+      newErrors[`price_${defaultCurrency?.code || 'TRY'}`] = `${defaultCurrency?.name || 'Base currency'} price is required`;
+    }
+    activeCurrencies.forEach((c: Currency) => {
+      const val = prices[c.code];
+      if (val && val.trim() !== '' && (isNaN(parseFloat(val)) || parseFloat(val) < 0)) {
+        newErrors[`price_${c.code}`] = `${c.name} price must be a non-negative number`;
+      }
+    });
     if (!stock || parseInt(stock) < 0) newErrors.stock = 'Valid stock is required';
 
     setErrors(newErrors);
@@ -102,6 +127,13 @@ const VariantFormPage: React.FC = () => {
       return;
     }
 
+    const variantPrices: Record<string, number> = {};
+    activeCurrencies.forEach((c: Currency) => {
+      const val = prices[c.code];
+      variantPrices[c.code] = val && val.trim() !== '' ? parseFloat(val) : 0;
+    });
+    const baseCurrencyCode = defaultCurrency?.code || 'TRY';
+
     const variantData = {
       sku,
       name: baseProduct.name,
@@ -110,7 +142,8 @@ const VariantFormPage: React.FC = () => {
       categoryId: baseProduct.categoryId,
       description: baseProduct.description,
       keywords: baseProduct.keywords,
-      price: parseFloat(price),
+      price: variantPrices[baseCurrencyCode] || 0,
+      prices: variantPrices,
       stock: parseInt(stock),
       images: variantImages.length > 0 ? variantImages : baseProduct.images, // Use variant images or inherit from base
       imageUrl: variantImages.length > 0 ? variantImages[0] : (baseProduct.images[0] || ''),
@@ -212,19 +245,37 @@ const VariantFormPage: React.FC = () => {
                 )}
               </div>
 
-              {/* Price */}
-              <div>
-                <label className="label">{t('products.price')} (₺) *</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                  className={`input ${errors.price ? 'border-red-500' : ''}`}
-                  placeholder="0.00"
-                />
-                {errors.price && <p className="text-sm text-red-600 mt-1">{errors.price}</p>}
+              {/* Prices - Multicurrency */}
+              <div className="space-y-3">
+                <label className="label">{t('products.price')} *</label>
+                {activeCurrencies.map((currency: Currency) => (
+                  <div key={currency.code}>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-[#F7F7F7] text-xs font-medium text-[#5C5C5C]">
+                        {currency.symbol}
+                      </span>
+                      <span className="text-sm text-[#5C5C5C]">{currency.code}</span>
+                      {currency.isDefault && (
+                        <span className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">Base</span>
+                      )}
+                    </div>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#5C5C5C] text-sm">{currency.symbol}</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={prices[currency.code] || ''}
+                        onChange={(e) => setPrices({ ...prices, [currency.code]: e.target.value })}
+                        className={`input pl-8 ${errors[`price_${currency.code}`] ? 'border-red-500' : ''}`}
+                        placeholder="0.00"
+                      />
+                    </div>
+                    {errors[`price_${currency.code}`] && (
+                      <p className="text-sm text-red-600 mt-1">{errors[`price_${currency.code}`]}</p>
+                    )}
+                  </div>
+                ))}
               </div>
 
               {/* Stock */}

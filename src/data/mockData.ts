@@ -278,6 +278,7 @@ export const initialProducts: Product[] = [
     keywords: 'suit, navy, wedding',
     stock: 45,
     price: 4999,
+    prices: { TRY: 4999, USD: 154.97, EUR: 139.97 },
     images: [
       'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=800',
       'https://images.unsplash.com/photo-1593030761757-71fae45fa0e7?w=800',
@@ -310,6 +311,7 @@ export const initialProducts: Product[] = [
     keywords: 'shirt, white, oxford, cotton',
     stock: 120,
     price: 799,
+    prices: { TRY: 799, USD: 24.77, EUR: 22.37 },
     images: [
       'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=800',
     ],
@@ -341,6 +343,7 @@ export const initialProducts: Product[] = [
     keywords: 'shirt, blue, oxford, cotton',
     stock: 95,
     price: 799,
+    prices: { TRY: 799, USD: 24.77, EUR: 22.37 },
     images: [
       'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=800',
     ],
@@ -372,6 +375,7 @@ export const initialProducts: Product[] = [
     keywords: 'shirt, black, oxford, cotton',
     stock: 78,
     price: 799,
+    prices: { TRY: 799, USD: 24.77, EUR: 22.37 },
     images: [
       'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=800',
     ],
@@ -403,6 +407,7 @@ export const initialProducts: Product[] = [
     keywords: 'tie, silk, patterned',
     stock: 85,
     price: 599,
+    prices: { TRY: 599, USD: 18.57, EUR: 16.77 },
     images: [
       'https://images.unsplash.com/photo-1589756823695-278bc8356558?w=800',
     ],
@@ -433,6 +438,7 @@ export const initialProducts: Product[] = [
     keywords: 'belt, leather, black',
     stock: 0,
     price: 899,
+    prices: { TRY: 899, USD: 27.87, EUR: 25.17 },
     images: [
       'https://images.unsplash.com/photo-1624222247344-550fb60583bb?w=800',
     ],
@@ -463,6 +469,7 @@ export const initialProducts: Product[] = [
     keywords: null,
     stock: 0,
     price: 5499,
+    prices: { TRY: 5499, USD: 170.47, EUR: 153.97 },
     images: [],
     imageUrl: '',
     attributes: {
@@ -489,6 +496,7 @@ export const initialProducts: Product[] = [
     keywords: 'shirt, oxford, classic',
     stock: 45,
     price: 1299,
+    prices: { TRY: 1299, USD: 40.27, EUR: 36.37 },
     images: [],
     imageUrl: '',
     attributes: {
@@ -516,6 +524,7 @@ export const initialProducts: Product[] = [
     keywords: 'pants, chino, slim fit',
     stock: 28,
     price: 1799,
+    prices: { TRY: 1799, USD: 55.77, EUR: 50.37 },
     images: [],
     imageUrl: '',
     attributes: {
@@ -706,6 +715,12 @@ export const initialSettings: Settings = {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     },
+  ],
+  currencies: [
+    { code: 'TRY', name: 'Turkish Lira', symbol: '₺', isDefault: true, isActive: true, exchangeRate: 1 },
+    { code: 'USD', name: 'US Dollar', symbol: '$', isDefault: false, isActive: true, exchangeRate: 0.031 },
+    { code: 'EUR', name: 'Euro', symbol: '€', isDefault: false, isActive: true, exchangeRate: 0.028 },
+    { code: 'GBP', name: 'British Pound', symbol: '£', isDefault: false, isActive: false, exchangeRate: 0.024 },
   ],
   categoryMappings: [],
   attributeMappings: [],

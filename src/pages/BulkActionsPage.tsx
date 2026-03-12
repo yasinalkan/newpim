@@ -23,7 +23,7 @@ import {
   type ParsedProduct,
   type ValidationError,
 } from '../utils/csvParser';
-import type { ProductStatus } from '../types';
+import type { ProductStatus, Currency } from '../types';
 
 type ActionTab = 'create' | 'update' | 'price' | 'stock';
 
@@ -43,7 +43,9 @@ interface BulkProductUpdate {
 }
 
 const BulkActionsPage: React.FC = () => {
-  const { products, brands, categories, createProduct, updateProduct, getProduct } = useData();
+  const { products, brands, categories, createProduct, updateProduct, getProduct, settings } = useData();
+  const activeCurrencies = settings.currencies?.filter((c: Currency) => c.isActive) || [];
+  const defaultCurrency = activeCurrencies.find((c: Currency) => c.isDefault) || activeCurrencies[0];
   const { currentUser } = useAuth();
   const navigate = useNavigate();
 
@@ -264,6 +266,7 @@ const BulkActionsPage: React.FC = () => {
       try {
         const brand = brands.find(b => b.id === item.brandId);
         
+        const itemPrice = item.price || 0;
         createProduct({
           sku: item.sku,
           baseSKU: null,
@@ -274,7 +277,8 @@ const BulkActionsPage: React.FC = () => {
           description: { tr: item.descriptionTr || '', en: item.descriptionEn || '' },
           keywords: null,
           stock: item.stock || 0,
-          price: item.price || 0,
+          price: itemPrice,
+          prices: { [defaultCurrency?.code || 'TRY']: itemPrice },
           images: item.images || [],
           imageUrl: item.images?.[0] || '',
           attributes: {},
@@ -327,7 +331,9 @@ const BulkActionsPage: React.FC = () => {
         }
 
         if (item['Price'] || item['price']) {
-          updateData.price = parseFloat(item['Price'] || item['price']);
+          const newPrice = parseFloat(item['Price'] || item['price']);
+          updateData.price = newPrice;
+          updateData.prices = { ...(existingProduct.prices || {}), [defaultCurrency?.code || 'TRY']: newPrice };
         }
 
         if (item['Stock'] || item['stock']) {
@@ -366,6 +372,7 @@ const BulkActionsPage: React.FC = () => {
 
         updateProduct(existingProduct.id, {
           price: item.price,
+          prices: { ...(existingProduct.prices || {}), [defaultCurrency?.code || 'TRY']: item.price },
           updatedBy: currentUser?.id || 1,
         });
         

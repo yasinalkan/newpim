@@ -30,7 +30,7 @@ import {
 } from 'lucide-react';
 import Pagination from '../components/Pagination';
 import { calculateProductCompleteness, getCompletenessColor } from '../utils/completeness';
-import type { Product, ProductStatus } from '../types';
+import type { Product, ProductStatus, Currency } from '../types';
 
 const ProductsPage: React.FC = () => {
   const location = useLocation();
@@ -50,7 +50,10 @@ const ProductsPage: React.FC = () => {
     bulkUpdateStock,
     channels,
     createExportLog,
+    settings,
   } = useData();
+  const activeCurrencies = settings.currencies?.filter((c: Currency) => c.isActive) || [];
+  const defaultCurrency = activeCurrencies.find((c: Currency) => c.isDefault) || activeCurrencies[0];
   const { hasPermission, currentUser } = useAuth();
 
   // Search and filters
@@ -1706,7 +1709,7 @@ const ProductsPage: React.FC = () => {
                       <td className={`text-[#171717] font-medium ${isVariant ? 'text-sm' : ''}`}>
                         {editingPrice === product.id ? (
                           <div className="flex items-center gap-1">
-                            <span className="text-sm">₺</span>
+                            <span className="text-sm">{defaultCurrency?.symbol || '₺'}</span>
                             <input
                               type="number"
                               min="0"
@@ -1716,8 +1719,10 @@ const ProductsPage: React.FC = () => {
                               onBlur={() => {
                                 const newPrice = parseFloat(editingPriceValue);
                                 if (!isNaN(newPrice) && newPrice >= 0) {
+                                  const updatedPrices = { ...(product.prices || {}), [defaultCurrency?.code || 'TRY']: newPrice };
                                   updateProduct(product.id, {
                                     price: newPrice,
+                                    prices: updatedPrices,
                                     updatedBy: currentUser?.id || 1,
                                   });
                                 }
@@ -1728,8 +1733,10 @@ const ProductsPage: React.FC = () => {
                                 if (e.key === 'Enter') {
                                   const newPrice = parseFloat(editingPriceValue);
                                   if (!isNaN(newPrice) && newPrice >= 0) {
+                                    const updatedPrices = { ...(product.prices || {}), [defaultCurrency?.code || 'TRY']: newPrice };
                                     updateProduct(product.id, {
                                       price: newPrice,
+                                      prices: updatedPrices,
                                       updatedBy: currentUser?.id || 1,
                                     });
                                   }
@@ -1753,9 +1760,12 @@ const ProductsPage: React.FC = () => {
                               }
                             }}
                             className={`cursor-pointer hover:bg-white px-2 py-1 rounded transition-colors ${canEdit ? 'hover:bg-white' : ''}`}
-                            title={canEdit ? 'Click to edit price' : ''}
+                            title={canEdit ? 'Click to edit base price' : ''}
                           >
-                            ₺{product.price.toLocaleString()}
+                            {defaultCurrency?.symbol || '₺'}{product.price.toLocaleString()}
+                            {product.prices && Object.keys(product.prices).length > 1 && (
+                              <span className="text-xs text-[#A4A4A4] ml-1">+{Object.keys(product.prices).length - 1}</span>
+                            )}
                           </span>
                         )}
                       </td>
@@ -2025,7 +2035,7 @@ const ProductsPage: React.FC = () => {
                 </div>
                 <div>
                   <label className="label">
-                    {bulkPriceMethod.includes('percent') ? 'Percentage' : 'Amount'} (₺)
+                    {bulkPriceMethod.includes('percent') ? 'Percentage' : `Amount (${defaultCurrency?.symbol || '₺'})`}
                   </label>
                   <input
                     type="number"
@@ -2050,16 +2060,16 @@ const ProductsPage: React.FC = () => {
                     <div className="grid grid-cols-3 gap-4 text-sm">
                       <div>
                         <p className="text-[#5C5C5C]">Total Current Price</p>
-                        <p className="text-lg font-semibold text-[#171717]">₺{totalCurrentPrice.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                        <p className="text-lg font-semibold text-[#171717]">{defaultCurrency?.symbol || '₺'}{totalCurrentPrice.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                       </div>
                       <div>
                         <p className="text-[#5C5C5C]">Total New Price</p>
-                        <p className="text-lg font-semibold text-blue-900">₺{totalNewPrice.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                        <p className="text-lg font-semibold text-blue-900">{defaultCurrency?.symbol || '₺'}{totalNewPrice.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                       </div>
                       <div>
                         <p className="text-[#5C5C5C]">Change</p>
                         <p className={`text-lg font-semibold ${priceChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {priceChange >= 0 ? '+' : ''}₺{priceChange.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          {priceChange >= 0 ? '+' : ''}{defaultCurrency?.symbol || '₺'}{priceChange.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           {bulkPriceMethod.includes('percent') && ` (${priceChangePercent >= 0 ? '+' : ''}${priceChangePercent.toFixed(1)}%)`}
                         </p>
                       </div>
@@ -2094,13 +2104,13 @@ const ProductsPage: React.FC = () => {
                                     </div>
                                   </td>
                                   <td className="px-4 py-2 text-right text-[#5C5C5C]">
-                                    ₺{preview.currentPrice.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    {defaultCurrency?.symbol || '₺'}{preview.currentPrice.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                   </td>
                                   <td className="px-4 py-2 text-right font-medium text-blue-900">
-                                    ₺{preview.newPrice.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    {defaultCurrency?.symbol || '₺'}{preview.newPrice.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                   </td>
                                   <td className={`px-4 py-2 text-right font-medium ${change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                    {change >= 0 ? '+' : ''}₺{change.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    {change >= 0 ? '+' : ''}{defaultCurrency?.symbol || '₺'}{change.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                   </td>
                                 </tr>
                               );

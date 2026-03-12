@@ -367,8 +367,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
 
-  // Bulk update price (FR-3.10)
+  // Bulk update price (FR-3.10) - updates base currency price and syncs to prices map
   const bulkUpdatePrice = (productIds: number[], method: 'set' | 'increase_amount' | 'increase_percent' | 'decrease_amount' | 'decrease_percent', value: number): void => {
+    const defaultCurrency = settings.currencies?.find(c => c.isDefault);
+    const baseCurrencyCode = defaultCurrency?.code || 'TRY';
+
     setProducts(products.map(p => {
       if (!productIds.includes(p.id)) return p;
 
@@ -391,9 +394,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           break;
       }
 
+      const finalPrice = Math.max(0, newPrice);
       return {
         ...p,
-        price: Math.max(0, newPrice),
+        price: finalPrice,
+        prices: { ...(p.prices || {}), [baseCurrencyCode]: finalPrice },
         updatedAt: new Date().toISOString(),
       };
     }));

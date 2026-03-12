@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { ArrowLeft, Edit, Trash2, Package, Info, Tags, Image as ImageIcon, Clock, Plus, Layers, CheckCircle, FileText, DollarSign } from 'lucide-react';
 import { format } from 'date-fns';
 import { calculateProductCompleteness, getCompletenessColor } from '../utils/completeness';
-import type { ProductStatus } from '../types';
+import type { ProductStatus, Currency } from '../types';
 
 type TabType = 'overview' | 'attributes' | 'images' | 'history' | 'pricing';
 
@@ -14,7 +14,9 @@ const ProductDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { t, getText } = useLanguage();
-  const { getProduct, deleteProduct, categories, attributes, products, updateProduct, hasProductOrders, getProductOrders } = useData();
+  const { getProduct, deleteProduct, categories, attributes, products, updateProduct, hasProductOrders, getProductOrders, settings } = useData();
+  const activeCurrencies = settings.currencies?.filter((c: Currency) => c.isActive) || [];
+  const defaultCurrency = activeCurrencies.find((c: Currency) => c.isDefault) || activeCurrencies[0];
   const { hasPermission, currentUser } = useAuth();
 
   const [activeTab, setActiveTab] = useState<TabType>('overview');
@@ -587,7 +589,18 @@ const ProductDetailPage: React.FC = () => {
                     </div>
                     <div>
                       <p className="text-sm text-[#5C5C5C]">Price</p>
-                      <p className="font-medium text-[#171717]">₺{product.price.toLocaleString()}</p>
+                      {product.prices && Object.keys(product.prices).length > 0 ? (
+                        <div className="space-y-1">
+                          {activeCurrencies.map(c => product.prices[c.code] !== undefined && (
+                            <p key={c.code} className="font-medium text-[#171717]">
+                              {c.symbol}{product.prices[c.code].toLocaleString()}
+                              {c.isDefault && <span className="text-xs text-[#5C5C5C] ml-1">({c.code})</span>}
+                            </p>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="font-medium text-[#171717]">{defaultCurrency?.symbol || '₺'}{product.price.toLocaleString()}</p>
+                      )}
                     </div>
                   </div>
                   {canEdit && (
@@ -701,11 +714,11 @@ const ProductDetailPage: React.FC = () => {
                           </p>
                         </div>
                         <div>
-                          <p className="text-xs text-[#5C5C5C]">Price Range</p>
+                          <p className="text-xs text-[#5C5C5C]">Price Range ({defaultCurrency?.code || 'TRY'})</p>
                           <p className="text-lg font-semibold text-[#171717]">
                             {variants.length > 0 ? (
                               <>
-                                ₺{Math.min(...variants.map(v => v.price)).toLocaleString()} - ₺{Math.max(...variants.map(v => v.price)).toLocaleString()}
+                                {defaultCurrency?.symbol || '₺'}{Math.min(...variants.map(v => v.price)).toLocaleString()} - {defaultCurrency?.symbol || '₺'}{Math.max(...variants.map(v => v.price)).toLocaleString()}
                               </>
                             ) : '-'}
                           </p>
@@ -742,7 +755,7 @@ const ProductDetailPage: React.FC = () => {
                                   </div>
                                 )}
                                 <p className="text-sm text-[#5C5C5C] mt-2">
-                                  Stock: {variant.stock} | Price: ₺{variant.price.toLocaleString()}
+                                  Stock: {variant.stock} | Price: {defaultCurrency?.symbol || '₺'}{variant.price.toLocaleString()}
                                 </p>
                               </div>
                               <span className={`badge ${variant.status === 'complete' ? 'badge-success' : 'badge-warning'}`}>
@@ -979,8 +992,28 @@ const ProductDetailPage: React.FC = () => {
               <h2 className="text-lg font-semibold text-[#171717] mb-4">Pricing & Stock</h2>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm text-[#5C5C5C]">Price</p>
-                  <p className="text-2xl font-bold text-[#171717]">₺{product.price.toLocaleString()}</p>
+                  <p className="text-sm text-[#5C5C5C] mb-2">Prices</p>
+                  {product.prices && Object.keys(product.prices).length > 0 ? (
+                    <div className="space-y-2">
+                      {activeCurrencies.map(c => {
+                        const val = product.prices[c.code];
+                        if (val === undefined || val === null) return null;
+                        return (
+                          <div key={c.code} className="flex items-center gap-2">
+                            <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-[#F7F7F7] text-sm font-medium text-[#5C5C5C]">
+                              {c.symbol}
+                            </span>
+                            <div>
+                              <p className="text-xl font-bold text-[#171717]">{c.symbol}{val.toLocaleString()}</p>
+                              <p className="text-xs text-[#5C5C5C]">{c.name}{c.isDefault ? ' (Base)' : ''}</p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-2xl font-bold text-[#171717]">{defaultCurrency?.symbol || '₺'}{product.price.toLocaleString()}</p>
+                  )}
                 </div>
                 <div>
                   <p className="text-sm text-[#5C5C5C]">Stock</p>

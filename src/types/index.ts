@@ -37,7 +37,8 @@ export interface Product {
   description: MultiLangText | string; // Supports both string for legacy and MultiLangText for localization
   keywords: string | null;
   stock: number;
-  price: number; // Price (required)
+  price: number; // Base currency price (required)
+  prices: Record<string, number>; // Multicurrency prices keyed by currency code
   images: string[];
   imageUrl: string;
   attributes: Record<string, { value: string | number | boolean; status?: string }>;
@@ -293,6 +294,7 @@ export interface Settings {
   validation: ValidationRules;
   preferences: SystemPreferences;
   languages: Language[]; // System languages
+  currencies: Currency[]; // System currencies
   // Channel mappings
   categoryMappings: CategoryMapping[];
   attributeMappings: AttributeMapping[];
@@ -325,6 +327,16 @@ export interface Language {
   isActive: boolean; // Whether this language is active
   createdAt: string;
   updatedAt: string;
+}
+
+// Currency types
+export interface Currency {
+  code: string;
+  name: string;
+  symbol: string;
+  isDefault: boolean;
+  isActive: boolean;
+  exchangeRate: number; // Rate relative to base currency (base currency = 1)
 }
 
 // Search and filter types

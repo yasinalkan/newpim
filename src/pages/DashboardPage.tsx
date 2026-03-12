@@ -3,9 +3,12 @@ import { Link } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { Package, FolderTree, Tags, TrendingUp, AlertCircle } from 'lucide-react';
+import type { Currency } from '../types';
 
 const DashboardPage: React.FC = () => {
-  const { products, categories, attributes } = useData();
+  const { products, categories, attributes, settings } = useData();
+  const activeCurrencies = settings.currencies?.filter((c: Currency) => c.isActive) || [];
+  const defaultCurrency = activeCurrencies.find((c: Currency) => c.isDefault) || activeCurrencies[0];
   const { currentUser } = useAuth();
 
   const stats = [
@@ -206,7 +209,7 @@ const DashboardPage: React.FC = () => {
                       {product.stock}
                     </span>
                   </td>
-                  <td className="text-[#171717] font-medium">₺{product.price.toLocaleString()}</td>
+                  <td className="text-[#171717] font-medium">{defaultCurrency?.symbol || '₺'}{product.price.toLocaleString()}</td>
                 </tr>
               ))}
             </tbody>

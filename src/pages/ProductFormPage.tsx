@@ -4,7 +4,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { ArrowLeft, Save, Plus, X, Image as ImageIcon, GripVertical, Globe, Info } from 'lucide-react';
-import type { MultiLangText, ProductStatus } from '../types';
+import type { MultiLangText, ProductStatus, Currency } from '../types';
 import CategoryPicker from '../components/CategoryPicker';
 import LocalizedTextField from '../components/LocalizedTextField';
 
@@ -39,7 +39,16 @@ const ProductFormPage: React.FC = () => {
   const [brandId, setBrandId] = useState<number>(0);
   const [categoryId, setCategoryId] = useState<number>(0);
   const [description, setDescription] = useState<MultiLangText>(initializeMultiLangText());
-  const [price, setPrice] = useState('');
+  const activeCurrencies = settings.currencies?.filter((c: Currency) => c.isActive) || [];
+  const defaultCurrency = activeCurrencies.find((c: Currency) => c.isDefault) || activeCurrencies[0];
+
+  const initializePrices = (): Record<string, string> => {
+    const p: Record<string, string> = {};
+    activeCurrencies.forEach((c: Currency) => { p[c.code] = ''; });
+    return p;
+  };
+
+  const [prices, setPrices] = useState<Record<string, string>>(initializePrices);
   const [stock, setStock] = useState('');
   const [status, setStatus] = useState<ProductStatus>('draft');
   const [productAttributes, setProductAttributes] = useState<Record<string, { value: string | number | boolean }>>({});
@@ -91,7 +100,15 @@ const ProductFormPage: React.FC = () => {
         setDescription(existingDescription);
       }
       
-      setPrice(existingProduct.price.toString());
+      const loadedPrices: Record<string, string> = {};
+      activeCurrencies.forEach((c: Currency) => {
+        const val = existingProduct.prices?.[c.code];
+        loadedPrices[c.code] = val !== undefined && val !== null ? val.toString() : '';
+      });
+      if (Object.values(loadedPrices).every(v => v === '') && existingProduct.price) {
+        if (defaultCurrency) loadedPrices[defaultCurrency.code] = existingProduct.price.toString();
+      }
+      setPrices(loadedPrices);
       setStock(existingProduct.stock.toString());
       setStatus(existingProduct.status);
       setProductAttributes(existingProduct.attributes);
@@ -278,10 +295,12 @@ const ProductFormPage: React.FC = () => {
     if (brandId === 0) newErrors.brand = 'Brand is required';
     if (categoryId === 0) newErrors.category = 'Category is required';
     
-    // Price: if not provided, defaults to 0. If provided, must be >= 0
-    if (price && price.trim() !== '' && (isNaN(parseFloat(price)) || parseFloat(price) < 0)) {
-      newErrors.price = 'Price must be a non-negative number';
-    }
+    activeCurrencies.forEach((c: Currency) => {
+      const val = prices[c.code];
+      if (val && val.trim() !== '' && (isNaN(parseFloat(val)) || parseFloat(val) < 0)) {
+        newErrors[`price_${c.code}`] = `${c.name} price must be a non-negative number`;
+      }
+    });
     
     // Stock: if not provided, defaults to 0. If provided, must be >= 0
     if (stock && stock.trim() !== '' && (isNaN(parseInt(stock)) || parseInt(stock) < 0)) {
@@ -328,8 +347,13 @@ const ProductFormPage: React.FC = () => {
 
     const brand = brands.find((b) => b.id === brandId);
     
-    // Default price and stock to 0 if not provided (per FR-1.1)
-    const productPrice = price && price.trim() !== '' ? parseFloat(price) : 0;
+    const productPrices: Record<string, number> = {};
+    activeCurrencies.forEach((c: Currency) => {
+      const val = prices[c.code];
+      productPrices[c.code] = val && val.trim() !== '' ? parseFloat(val) : 0;
+    });
+    const baseCurrencyCode = defaultCurrency?.code || 'TRY';
+    const productPrice = productPrices[baseCurrencyCode] || 0;
     const productStock = stock && stock.trim() !== '' ? parseInt(stock) : 0;
     
     const productData = {
@@ -341,6 +365,7 @@ const ProductFormPage: React.FC = () => {
       categoryId,
       description,
       price: productPrice,
+      prices: productPrices,
       stock: productStock,
       images: productImages,
       imageUrl: productImages[0] || '',
@@ -960,22 +985,40 @@ const ProductFormPage: React.FC = () => {
             <div className="card p-6">
               <h2 className="text-lg font-semibold text-[#171717] mb-4">Pricing</h2>
               <div className="space-y-4">
-                <div>
-                  <label className="label">Price (₺)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={price}
-                    onChange={(e) => setPrice(e.target.value)}
-                    className={`input ${errors.price ? 'border-red-500' : ''}`}
-                    placeholder="0.00 (defaults to 0 if not provided)"
-                  />
-                  {errors.price && <p className="text-sm text-red-600 mt-1">{errors.price}</p>}
-                  {!errors.price && (
-                    <p className="text-sm text-[#5C5C5C] mt-1">Defaults to 0 if not provided</p>
-                  )}
-                </div>
+                {activeCurrencies.map((currency: Currency) => (
+                  <div key={currency.code}>
+                    <label className="label flex items-center gap-2">
+                      <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-[#F7F7F7] text-xs font-medium text-[#5C5C5C]">
+                        {currency.symbol}
+                      </span>
+                      {currency.name} ({currency.code})
+                      {currency.isDefault && (
+                        <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">Base</span>
+                      )}
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#5C5C5C] text-sm">{currency.symbol}</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={prices[currency.code] || ''}
+                        onChange={(e) => setPrices({ ...prices, [currency.code]: e.target.value })}
+                        className={`input pl-8 ${errors[`price_${currency.code}`] ? 'border-red-500' : ''}`}
+                        placeholder="0.00"
+                      />
+                    </div>
+                    {errors[`price_${currency.code}`] && (
+                      <p className="text-sm text-red-600 mt-1">{errors[`price_${currency.code}`]}</p>
+                    )}
+                  </div>
+                ))}
+                {activeCurrencies.length === 0 && (
+                  <p className="text-sm text-[#5C5C5C]">No active currencies configured. Go to Settings to add currencies.</p>
+                )}
+                <p className="text-xs text-[#5C5C5C]">
+                  Set prices for each active currency. Empty fields default to 0.
+                </p>
               </div>
             </div>
 
