@@ -1,16 +1,12 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Settings as SettingsIcon, Globe, DollarSign, Ruler } from 'lucide-react';
+import { Settings as SettingsIcon, Globe, SlidersHorizontal } from 'lucide-react';
 
 import ValidationRules from '../components/settings/ValidationRules';
-import LanguageManagement from '../components/settings/LanguageManagement';
-import CurrencyManagement from '../components/settings/CurrencyManagement';
-import UnitManagement from '../components/settings/UnitManagement';
 
 const SettingsPage: React.FC = () => {
   const { currentUser } = useAuth();
-
-  const [activeTab, setActiveTab] = useState<'validation' | 'languages' | 'currencies' | 'units'>('validation');
 
   if (currentUser?.role !== 'admin') {
     return (
@@ -23,46 +19,48 @@ const SettingsPage: React.FC = () => {
     );
   }
 
-  const tabs = [
-    { id: 'validation', label: 'Validation Rules', icon: SettingsIcon },
-    { id: 'languages',  label: 'Languages',        icon: Globe         },
-    { id: 'currencies', label: 'Currencies',        icon: DollarSign    },
-    { id: 'units',      label: 'Units',             icon: Ruler         },
-  ];
-
   return (
     <div className="space-y-6">
-      {/* Tabs */}
-      <div className="border-b border-[#EBEBEB]">
-        <nav className="-mb-px flex space-x-8">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                className={`
-                  flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm
-                  ${activeTab === tab.id
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-[#5C5C5C] hover:text-[#5C5C5C] hover:border-[#EBEBEB]'
-                  }
-                `}
-              >
-                <Icon size={18} />
-                {tab.label}
-              </button>
-            );
-          })}
-        </nav>
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-bold text-[#171717]">Settings</h1>
+        <p className="text-sm text-[#5C5C5C] mt-1">
+          Configure validation rules and system preferences
+        </p>
       </div>
 
-      {/* Tab Content */}
+      {/* Quick links */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Link
+          to="/settings/localization"
+          className="card p-6 hover:shadow-md transition-shadow flex items-start gap-4 group"
+        >
+          <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+            <Globe size={24} className="text-primary" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-[#171717]">Localization</h2>
+            <p className="text-sm text-[#5C5C5C] mt-1">
+              Manage languages, currencies, and measurement units
+            </p>
+          </div>
+        </Link>
+
+        <div className="card p-6 border-2 border-dashed border-[#EBEBEB]">
+          <div className="w-12 h-12 rounded-lg bg-[#F7F7F7] flex items-center justify-center mb-3">
+            <SlidersHorizontal size={24} className="text-[#5C5C5C]" />
+          </div>
+          <h2 className="text-lg font-semibold text-[#171717]">Validation Rules</h2>
+          <p className="text-sm text-[#5C5C5C] mt-1">
+            Product validation and field requirements
+          </p>
+        </div>
+      </div>
+
+      {/* Validation Rules (inline) */}
       <div>
-        {activeTab === 'validation' && <ValidationRules />}
-        {activeTab === 'languages'  && <LanguageManagement />}
-        {activeTab === 'currencies' && <CurrencyManagement />}
-        {activeTab === 'units'      && <UnitManagement />}
+        <h2 className="text-lg font-semibold text-[#171717] mb-4">Validation Rules</h2>
+        <ValidationRules />
       </div>
     </div>
   );

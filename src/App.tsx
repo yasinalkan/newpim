@@ -13,6 +13,7 @@ import CategoryDetailPage from './pages/CategoryDetailPage';
 import AttributesPage from './pages/AttributesPage';
 import UsersPage from './pages/UsersPage';
 import SettingsPage from './pages/SettingsPage';
+import LocalizationPage from './pages/LocalizationPage';
 import ChannelsPage from './pages/ChannelsPage';
 import ChannelFormPage from './pages/ChannelFormPage';
 import CategoryMappingPage from './pages/CategoryMappingPage';
@@ -58,6 +59,7 @@ const AppRoutes = () => {
                 <Route path="/channels/category-mapping" element={<CategoryMappingPage />} />
                 <Route path="/channels/attribute-mapping" element={<AttributeMappingPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/settings/localization" element={<LocalizationPage />} />
               </Routes>
             </Layout>
           </ProtectedRoute>

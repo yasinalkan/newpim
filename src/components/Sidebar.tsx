@@ -18,6 +18,7 @@ import {
   GitBranch,
   GitMerge,
   SlidersHorizontal,
+  Globe,
 } from 'lucide-react';
 
 const Sidebar: React.FC = () => {
@@ -99,6 +100,11 @@ const Sidebar: React.FC = () => {
           path: '/settings',
           icon: SlidersHorizontal,
           label: 'General Settings',
+        },
+        {
+          path: '/settings/localization',
+          icon: Globe,
+          label: 'Localization',
         },
         {
           path: '/users',
